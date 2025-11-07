@@ -153,6 +153,7 @@ echo "conda activate ST" >> ~/.bashrc
 ```bash
 python download_xcomet.py --output_dir ~/models/XCOMET-XL
 ```
+（需要先登陆Huggingface，并在XCOMET-XL网页(https://huggingface.co/Unbabel/XCOMET-XL)上授权下载！！！）
 
 或者设置环境变量：
 
@@ -903,7 +904,7 @@ kill -9 <PID>
 
 本项目尽可能复用MT_Grpo中的相关代码：
 
-- **XCOMET加载**：复用`MT_Grpo/verl/comet_reward_batch_with_ray.py`中的模型加载和评分方式，需要先登陆Huggingface，并在XCOMET-XL网页(https://huggingface.co/Unbabel/XCOMET-XL)上授权下载！！！
+- **XCOMET加载**：复用`MT_Grpo/verl/comet_reward_batch_with_ray.py`中的模型加载和评分方式
 - **vllm使用**：复用`MT_Grpo/verl/verl/workers/rollout/vllm_rollout/vllm_rollout.py`中的vllm使用方式
 - **数据下载**：复用`MT_Grpo/scripts/download_comet_ckpts.py`中的下载方式
 - **配置对齐**：与`test_time/vllm_infer.py`的配置完全对齐

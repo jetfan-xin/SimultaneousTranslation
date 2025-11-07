@@ -879,76 +879,7 @@ SimultaneousTranslation/
 
 ## 故障排除
 
-### 1. GPU内存不足（OOM）
-
-**症状**：
-```
-ValueError: Free memory on device (33.7/47.4 GiB) on startup is less than desired GPU memory utilization (0.85, 40.29 GiB)
-```
-
-**解决方案**：
-- 程序会自动检测并选择内存最充足的GPU
-- 如果所有GPU都不足，程序会自动降低 `gpu_memory_utilization`
-- 手动降低：`--gpu_memory_utilization 0.7` 或 `0.6`
-- 清理GPU上的其他进程：`nvidia-smi` 查看并 `kill` 占用GPU的进程
-
-### 2. XCOMET多进程重复加载
-
-**症状**：
-- 日志中出现多次重复的数据加载和模型加载
-- 每个GPU都启动了一个进程
-
-**解决方案**：
-- 已修复：XCOMET现在使用单GPU（`gpus=1`）进行推理
-- 如果仍然出现，检查是否有多个XCOMET实例在运行
-
-### 3. CUDA设备端断言错误
-
-**症状**：
-```
-CUDA error: device-side assert triggered
-```
-
-**解决方案**：
-- 使用 `--xcomet_cpu` 强制XCOMET使用CPU模式
-- 检查数据质量（是否有空字符串或无效数据）
-- 清理GPU状态：`kill` 所有相关进程后重新运行
-
-### 4. vLLM初始化失败
-
-**症状**：
-```
-[Qwen] Failed to load with vLLM: Engine core initialization failed
-```
-
-**解决方案**：
-- 程序会自动回退到transformers后端
-- 检查GPU内存是否充足
-- 降低 `gpu_memory_utilization`
-- 检查 `CUDA_VISIBLE_DEVICES` 是否正确设置
-
-### 5. 采样参数警告
-
-**症状**：
-```
-UserWarning: do_sample is set to False. However, temperature is set to 0.7
-```
-
-**解决方案**：
-- 已修复：当 `temperature=0` 或 `top_p=1` 时，程序会自动使用greedy decoding
-- 这些警告不影响功能，可以忽略
-
-### 6. GPU选择错误
-
-**症状**：
-- 程序选择了错误的GPU（如选择了已被占用的GPU）
-
-**解决方案**：
-- 程序现在使用 `nvidia-smi` 获取准确的内存信息
-- 自动避开已被XCOMET占用的GPU
-- 如果仍有问题，手动指定GPU：`--qwen_gpus 1`
-
-### 7. 进程残留占用GPU
+### 进程残留占用GPU
 
 **症状**：
 - `nvidia-smi` 显示GPU被占用，但找不到对应进程
@@ -972,7 +903,7 @@ kill -9 <PID>
 
 本项目尽可能复用MT_Grpo中的相关代码：
 
-- **XCOMET加载**：复用`MT_Grpo/verl/comet_reward_batch_with_ray.py`中的模型加载和评分方式
+- **XCOMET加载**：复用`MT_Grpo/verl/comet_reward_batch_with_ray.py`中的模型加载和评分方式，需要先登陆Huggingface，并在XCOMET-XL网页(https://huggingface.co/Unbabel/XCOMET-XL)上授权下载！！！
 - **vllm使用**：复用`MT_Grpo/verl/verl/workers/rollout/vllm_rollout/vllm_rollout.py`中的vllm使用方式
 - **数据下载**：复用`MT_Grpo/scripts/download_comet_ckpts.py`中的下载方式
 - **配置对齐**：与`test_time/vllm_infer.py`的配置完全对齐

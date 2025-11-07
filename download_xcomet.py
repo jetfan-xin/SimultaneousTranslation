@@ -3,6 +3,7 @@
 """
 下载XCOMET模型checkpoint
 复用MT_Grpo/scripts/download_comet_ckpts.py中的实现
+注意⚠️：需要先登陆Huggingface，并在XCOMET-XL网页(https://huggingface.co/Unbabel/XCOMET-XL)上授权下载！！！
 """
 
 import os

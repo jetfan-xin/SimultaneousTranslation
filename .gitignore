@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 数据文件（大文件，不提交到GitHub）
+data/train/parquet/*.parquet
+data/test/parquet/*.parquet
+*.parquet
+
+# 输出结果文件（不提交到GitHub，文件太大）
+# *.json
+# 如果需要提交某些JSON文件，可以使用：git add -f <文件名>
+
+# 模型文件（太大，不提交）
+models/
+*.ckpt
+*.bin
+*.safetensors
+
+# 日志文件
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.bak
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# 环境变量文件
+.env
+.env.local
+

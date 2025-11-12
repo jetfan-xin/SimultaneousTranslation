@@ -476,51 +476,29 @@ def main():
         if extended_mode:
             # ========== 扩展模式流程 ==========
             
-            # ========== 阶段1：数据原稿切分为原稿短句 ==========
+            # ========== 阶段1：批量生成完整原文的初稿翻译 ==========
             print("\n" + "="*60)
-            print("阶段1: 数据原稿切分为原稿短句")
+            print("阶段1: 批量生成完整原文的初稿翻译")
             print("="*60)
             
-            for idx in tqdm(range(num_samples), desc="切分原稿短句"):
-                src_text = results[idx]['src_text']
-                src_segments = split_into_segments(src_text)
-                if not src_segments and src_text:
-                    src_segments = [src_text.strip()]
-                results[idx]['src_segments'] = src_segments
-                results[idx]['draft_segments'] = []  # 初始化
-                results[idx]['draft_segment_generated_texts'] = []  # 每个短句的生成文本
-                results[idx]['draft_segment_translations'] = []  # 每个短句的翻译
-                results[idx]['draft_segment_format_scores'] = []  # 每个短句的格式得分
-                results[idx]['draft_segment_results'] = []  # XCOMET评分结果
-            
-            # ========== 阶段2：批量生成所有原稿短句的初稿短句 ==========
-            print("\n" + "="*60)
-            print("阶段2: 批量生成所有原稿短句的初稿短句")
-            print("="*60)
-            
-            # 收集所有需要生成的短句prompt
-            segment_prompts: List[str] = []
-            segment_mapping: List[tuple] = []  # (sample_idx, segment_idx)
-            
+            # 收集所有完整原文的prompt
+            draft_prompts: List[str] = []
             for idx in range(num_samples):
-                src_segments = results[idx]['src_segments']
-                for seg_idx, src_seg in enumerate(src_segments):
-                    draft_example = {
-                        'lg': results[idx]['lang_pair'],
-                        'src_text': src_seg,
-                    }
-                    draft_prompt = make_prefix(
-                        draft_example,
-                        template_type='draft',
-                        tokenizer=tokenizer
-                    )
-                    segment_prompts.append(draft_prompt)
-                    segment_mapping.append((idx, seg_idx))
+                draft_example = {
+                    'lg': results[idx]['lang_pair'],
+                    'src_text': results[idx]['src_text'],  # 完整原文
+                }
+                draft_prompt = make_prefix(
+                    draft_example,
+                    template_type='draft',
+                    tokenizer=tokenizer
+                )
+                draft_prompts.append(draft_prompt)
             
-            # 批量生成所有短句的初稿
-            all_segment_generated_texts: List[str] = []
-            for i in tqdm(range(0, len(segment_prompts), args.batch_size), desc="生成初稿短句"):
-                batch_prompts = segment_prompts[i:i + args.batch_size]
+            # 批量生成所有完整原文的初稿
+            all_draft_generated_texts: List[str] = []
+            for i in tqdm(range(0, len(draft_prompts), args.batch_size), desc="生成完整初稿"):
+                batch_prompts = draft_prompts[i:i + args.batch_size]
                 try:
                     generated_texts = qwen_generator.generate_draft(
                         batch_prompts,
@@ -540,43 +518,41 @@ def main():
                     traceback.print_exc()
                     generated_texts = [""] * len(batch_prompts)
                 
-                all_segment_generated_texts.extend(generated_texts)
+                all_draft_generated_texts.extend(generated_texts)
             
-            # 保存每个短句的生成结果
-            for prompt_idx, (sample_idx, segment_idx) in enumerate(segment_mapping):
-                if prompt_idx < len(all_segment_generated_texts):
-                    generated_text = all_segment_generated_texts[prompt_idx]
-                    if 'draft_segment_generated_texts' not in results[sample_idx]:
-                        results[sample_idx]['draft_segment_generated_texts'] = []
-                    # 确保列表长度足够
-                    while len(results[sample_idx]['draft_segment_generated_texts']) <= segment_idx:
-                        results[sample_idx]['draft_segment_generated_texts'].append(None)
-                    results[sample_idx]['draft_segment_generated_texts'][segment_idx] = generated_text
+            # 保存每个样本的完整初稿生成结果
+            for idx in range(num_samples):
+                if idx < len(all_draft_generated_texts):
+                    results[idx]['draft_generated_text'] = all_draft_generated_texts[idx]
+                else:
+                    results[idx]['draft_generated_text'] = ""
             
-            # ========== 阶段3：对所有初稿短句进行格式检查 ==========
+            # ========== 阶段2：对所有初稿进行格式检查，提取<translate>标签中的内容 ==========
             print("\n" + "="*60)
-            print("阶段3: 对所有初稿短句进行格式检查")
+            print("阶段2: 对所有初稿进行格式检查，提取<translate>标签中的内容")
             print("="*60)
             
-            for idx in tqdm(range(num_samples), desc="检查初稿短句格式"):
-                src_segments = results[idx]['src_segments']
-                draft_segment_generated_texts = results[idx].get('draft_segment_generated_texts', [])
-                
-                draft_segments = []
-                draft_segment_format_scores = []
-                
-                for seg_idx, src_seg in enumerate(src_segments):
-                    if seg_idx < len(draft_segment_generated_texts) and draft_segment_generated_texts[seg_idx]:
-                        generated_text = draft_segment_generated_texts[seg_idx]
-                        format_valid, draft_translation, format_score = check_and_extract_translate_tag(generated_text)
-                        draft_segments.append(draft_translation if format_valid else None)
-                        draft_segment_format_scores.append(format_score)
-                    else:
-                        draft_segments.append(None)
-                        draft_segment_format_scores.append(0)
+            for idx in tqdm(range(num_samples), desc="检查初稿格式"):
+                draft_text = results[idx].get('draft_generated_text', '')
+                format_valid, draft_translation, format_score = check_and_extract_translate_tag(draft_text)
+                results[idx]['draft_format_score'] = format_score
+                results[idx]['draft_translation'] = draft_translation if format_valid else None
+            
+            # ========== 阶段3：把完整的初稿翻译切分为初稿短句 ==========
+            print("\n" + "="*60)
+            print("阶段3: 把完整的初稿翻译切分为初稿短句")
+            print("="*60)
+            
+            for idx in tqdm(range(num_samples), desc="切分初稿翻译"):
+                draft_translation = results[idx].get('draft_translation')
+                if draft_translation:
+                    draft_segments = split_into_segments(draft_translation)
+                    if not draft_segments and draft_translation:
+                        draft_segments = [draft_translation.strip()]
+                else:
+                    draft_segments = []
                 
                 results[idx]['draft_segments'] = draft_segments
-                results[idx]['draft_segment_format_scores'] = draft_segment_format_scores
                 results[idx]['draft_segment_results'] = [
                     {"score": None, "error_spans": []} for _ in draft_segments
                 ]
@@ -605,25 +581,26 @@ def main():
                         del os.environ["CUDA_VISIBLE_DEVICES"]
                     print("[XCOMET] 默认使用CPU模式")
                 
-                # 构建三元组：只用src和mt，不用ref（直接删除ref字段）
+                # 构建三元组：完整原文、初稿短句、完整参考翻译
                 draft_segment_triplets = []
                 draft_segment_mapping = []
                 for idx in range(num_samples):
-                    src_segments = results[idx]['src_segments']
-                    draft_segments = results[idx]['draft_segments']
+                    src_text = results[idx]['src_text']  # 完整原文
+                    ref_text = results[idx]['tgt_text']  # 完整参考翻译
+                    draft_segments = results[idx].get('draft_segments', [])
+                    
                     for seg_idx, draft_seg in enumerate(draft_segments):
-                        if draft_seg and seg_idx < len(src_segments):
-                            src_seg = src_segments[seg_idx]
+                        if draft_seg:
                             draft_segment_triplets.append({
-                                "src": str(src_seg).strip(),
-                                "mt": str(draft_seg).strip()
-                                # 不使用参考翻译，直接不包含ref字段
+                                "src": str(src_text).strip(),
+                                "mt": str(draft_seg).strip(),
+                                "ref": str(ref_text).strip()
                             })
                             draft_segment_mapping.append((idx, seg_idx))
                 
                 if draft_segment_triplets:
                     try:
-                        print(f"[XCOMET] 批量评分 {len(draft_segment_triplets)} 个初稿短句（不使用参考翻译）...")
+                        print(f"[XCOMET] 批量评分 {len(draft_segment_triplets)} 个初稿短句（使用完整原文和完整参考翻译）...")
                         segment_results = xcomet_loader.predict(
                             draft_segment_triplets,
                             batch_size=args.xcomet_batch_size,
@@ -684,18 +661,17 @@ def main():
             repair_mapping: List[tuple] = []  # (sample_idx, segment_idx)
             
             for idx in range(num_samples):
-                src_segments = results[idx]['src_segments']
-                draft_segments = results[idx]['draft_segments']
+                src_text = results[idx]['src_text']  # 完整原文
+                ref_text = results[idx]['tgt_text']  # 完整参考翻译
+                draft_segments = results[idx].get('draft_segments', [])
                 segment_results = results[idx].get('draft_segment_results', [])
                 
-                results[idx]['repair_segment_outputs'] = [None] * len(src_segments)
-                results[idx]['final_segments'] = [None] * len(src_segments)
-                results[idx]['repair_segment_prompts'] = [None] * len(src_segments)
-                results[idx]['repair_segment_format_scores'] = [0] * len(src_segments)
+                results[idx]['repair_segment_outputs'] = [None] * len(draft_segments)
+                results[idx]['final_segments'] = [None] * len(draft_segments)
+                results[idx]['repair_segment_prompts'] = [None] * len(draft_segments)
+                results[idx]['repair_segment_format_scores'] = [0] * len(draft_segments)
                 
-                for seg_idx, src_seg in enumerate(src_segments):
-                    draft_seg = draft_segments[seg_idx] if seg_idx < len(draft_segments) else None
-                    
+                for seg_idx, draft_seg in enumerate(draft_segments):
                     if not draft_seg:
                         # 如果没有初稿短句，跳过
                         continue
@@ -704,10 +680,10 @@ def main():
                     if seg_idx < len(segment_results) and isinstance(segment_results[seg_idx], dict):
                         segment_errors = segment_results[seg_idx].get('error_spans', []) or []
                     
-                    # 生成repair prompt
+                    # 生成repair prompt：包含完整原文、初稿短句、完整参考翻译、错误片段
                     repair_example = {
                         'lg': results[idx]['lang_pair'],
-                        'src_text': src_seg,  # 原稿短句
+                        'src_text': src_text,  # 完整原文
                     }
                     repair_prompt = make_prefix(
                         repair_example,
@@ -715,7 +691,7 @@ def main():
                         tokenizer=tokenizer,
                         error_spans=segment_errors,
                         draft_translation=draft_seg,  # 初稿短句
-                        draft_src_segment=src_seg  # 初稿短句对应的原文短句（与原稿短句相同）
+                        ref_text=ref_text  # 完整参考翻译
                     )
                     repair_prompts.append(repair_prompt)
                     repair_mapping.append((idx, seg_idx))
@@ -768,12 +744,11 @@ def main():
             print("="*60)
             
             for idx in range(num_samples):
-                src_segments = results[idx]['src_segments']
-                draft_segments = results[idx]['draft_segments']
+                draft_segments = results[idx].get('draft_segments', [])
                 final_segments = results[idx].get('final_segments') or []
                 
                 # 确保所有短句都有最终结果
-                for seg_idx, src_seg in enumerate(src_segments):
+                for seg_idx in range(len(draft_segments)):
                     if seg_idx >= len(final_segments) or not final_segments[seg_idx]:
                         # 如果没有润色短句，使用初稿短句
                         draft_seg = draft_segments[seg_idx] if seg_idx < len(draft_segments) else None
@@ -785,10 +760,10 @@ def main():
                 # 检查是否有缺失的初稿短句
                 has_all_drafts = all(
                     seg_idx < len(draft_segments) and draft_segments[seg_idx] 
-                    for seg_idx in range(len(src_segments))
+                    for seg_idx in range(len(draft_segments))
                 )
                 
-                if has_all_drafts:
+                if has_all_drafts and final_segments:
                     # 合并所有短句为终稿
                     combined_translation = ' '.join(
                         seg.strip() for seg in final_segments if seg and seg.strip()

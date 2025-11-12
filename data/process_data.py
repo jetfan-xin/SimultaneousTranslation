@@ -54,10 +54,10 @@ def make_prefix(example, template_type, tokenizer, **kwargs):
         prefix = f"""A conversation between User and Assistant. The User asks for a translation from {src_lang_name} to {tgt_lang_name}, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the user with the final translation. The reasoning process and final translation are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> final translation here </translate>. \n\nUser:{user_input}\nAssistant:"""
     elif template_type == 'repair':
         # Repair mode：润色一个初稿短句
-        # 包含：原稿短句(src_segment)、初稿短句(draft_translation_segment)、初稿短句对应的原文(draft_src_segment)、错误spans
+        # 包含：完整原文(src_text)、初稿短句(draft_translation_segment)、完整参考翻译(ref_text)、错误spans
         error_spans = kwargs.get('error_spans', [])  # 直接获取error_spans列表
         draft_translation_segment = kwargs.get('draft_translation', '')  # 初稿短句
-        draft_src_segment = kwargs.get('draft_src_segment', '')  # 初稿短句对应的原文短句
+        ref_text = kwargs.get('ref_text', '')  # 完整参考翻译
 
         if draft_translation_segment:
             # 格式化error_spans为JSON字符串
@@ -79,8 +79,8 @@ def make_prefix(example, template_type, tokenizer, **kwargs):
                 error_spans_json = "[]"
             
             # 新格式：明确说明是润色一个初稿短句
-            # user_input 是原稿短句（src_segment）
-            prefix = f"""A conversation between User and Assistant. The User asks for polishing a draft translation segment from {src_lang_name} to {tgt_lang_name}. The draft translation segment is part of a translation for a source text segment. The Assistant needs to polish this draft translation segment based on the source text segment, the draft translation segment, the original source text segment that the draft was translated from, and error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: {user_input}\nDraft Translation Segment: {draft_translation_segment}\nDraft Source Segment: {draft_src_segment}\nError Evaluation: {error_spans_json}\nAssistant:"""
+            # user_input 是完整原文（src_text）
+            prefix = f"""A conversation between User and Assistant. The User asks for polishing a draft translation segment from {src_lang_name} to {tgt_lang_name}. The draft translation segment is part of a translation for a source text segment. The Assistant needs to polish this draft translation segment based on the source text segment, the draft translation segment, the original source text segment that the draft was translated from, and error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: {user_input}\nDraft Translation Segment: {draft_translation_segment}\nDraft Source Segment: {ref_text}\nError Evaluation: {error_spans_json}\nAssistant:"""
         else:
             # 如果没有初稿，使用draft模式
             prefix = f"""A conversation between User and Assistant. The User asks for a translation from {src_lang_name} to {tgt_lang_name}, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the user with the final translation. The reasoning process and final translation are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> final translation here </translate>. \n\nUser:{user_input}\nAssistant:"""

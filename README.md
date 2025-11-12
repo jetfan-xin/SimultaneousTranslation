@@ -18,7 +18,7 @@
    - 使用 `nvidia-smi` 获取准确的内存信息（包括其他进程占用的内存）
    - 自动避开已被XCOMET占用的GPU
    - 如果所有GPU内存都不足，自动降低 `gpu_memory_utilization`
-7. **扩展模式（可选）**：支持 `--pipeline_mode extended`，先切分原稿为短句，对每个短句生成初稿，针对短句调用XCOMET获取错误片段（不使用参考翻译），并逐句修复后合并为终稿
+7. **扩展模式（可选）**：支持 `--pipeline_mode extended`，不切分原文，先对完整原文生成初稿，然后切分初稿翻译为短句，针对短句调用XCOMET获取错误片段（使用完整原文和完整参考翻译），并逐句修复后合并为终稿
 8. **阶段式处理**：将整个流程分为多个阶段，每个阶段独立运行，便于调试和监控
 
 ## 安装依赖
@@ -241,7 +241,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 
 ### 扩展模式（Extended Mode）
 
-扩展模式先切分原稿为短句，对每个短句独立处理，包含7个阶段：切分原稿 → 生成初稿短句 → 格式检查 → 短句XCOMET评分 → 润色短句 → 汇总终稿 → 终稿XCOMET评分。
+扩展模式不切分原文，先对完整原文生成初稿，然后切分初稿翻译为短句进行处理，包含7个阶段：生成完整初稿 → 格式检查 → 切分初稿翻译 → 短句XCOMET评分 → 润色短句 → 汇总终稿 → 终稿XCOMET评分。
 
 #### GPU上运行：
 
@@ -256,8 +256,10 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 ```
 
 **说明**：
-- 扩展模式会先切分原稿为短句，对每个短句生成初稿
-- 短句级别的XCOMET评分不使用参考翻译（只使用 `src` 和 `mt`）
+- 扩展模式不切分原文，先对完整原文生成初稿
+- 然后切分初稿翻译为短句
+- 短句级别的XCOMET评分使用完整原文和完整参考翻译（三元组：完整原文、初稿短句、完整参考翻译）
+- Repair prompt包含完整原文和完整参考翻译，提供更多上下文
 - 只对有错误的短句进行润色
 - 如果任何初稿短句缺失，则没有终稿
 
@@ -450,7 +452,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
 
 3. **流程模式**：
    - `baseline`：按整句处理，生成初稿后直接进行XCOMET评分，然后进行repair
-   - `extended`：先切分原稿为短句，对每个短句生成初稿，逐句使用XCOMET获取错误span（不使用参考翻译），逐句修复后合并为终稿
+   - `extended`：不切分原文，先对完整原文生成初稿，然后切分初稿翻译为短句，逐句使用XCOMET获取错误span（使用完整原文和完整参考翻译），逐句修复后合并为终稿
 
 4. **自动功能**：
    - 默认使用CPU模式（不设置GPU参数时）
@@ -509,12 +511,34 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
 
 ### 扩展模式（Extended Mode）
 
-扩展模式先切分原稿为短句，对每个短句独立处理，包含7个阶段：
+扩展模式不切分原文，先对完整原文生成初稿，然后切分初稿翻译为短句进行处理，包含7个阶段：
 
-#### 阶段1：数据原稿切分为原稿短句
-- **输入**：原始数据中的 `src_text`
+#### 阶段1：批量生成完整原文的初稿翻译
+- **输入**：原始数据中的完整 `src_text`（不切分）
 - **处理**：
-  1. 使用 `split_into_segments` 函数进行**同传式切块**
+  1. 为每个完整原文生成 draft prompt（使用 `draft` 模板）
+  2. 批量调用 Qwen2.5-7B 生成完整原文的初稿翻译
+  3. 保存生成的原始文本到 `draft_generated_text`
+- **输出**：
+  - `draft_generated_text`：每个样本的完整初稿生成文本（包含 `<think>` 和 `<translate>` 标签）
+
+**关键特性**：
+- **不切分原文**：直接对完整原文生成初稿，保持原文的完整上下文
+- 整句级别的初稿生成
+
+#### 阶段2：对所有初稿进行格式检查，提取<translate>标签中的内容
+- **处理**：
+  1. 对每个 `draft_generated_text` 进行格式检查
+  2. 提取 `<translate>` 标签中的内容作为完整初稿翻译 `draft_translation`
+  3. 计算格式得分 `draft_format_score`（1=正确，0=错误）
+- **输出**：
+  - `draft_translation`：提取的完整初稿翻译
+  - `draft_format_score`：格式得分
+
+#### 阶段3：把完整的初稿翻译切分为初稿短句
+- **输入**：完整初稿翻译 `draft_translation`
+- **处理**：
+  1. 使用 `split_into_segments` 函数对完整初稿翻译进行**同传式切块**
   2. **硬边界**（强制切分）：
      - 句末终结符：`。！？!?`（保留在短句中）
      - 空行分隔
@@ -527,8 +551,8 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
      - 连接词结构中间（如"因为...所以..."）
   5. 保留标点符号在短句中
 - **输出**：
-  - `src_segments`：原稿短句列表
-  - 初始化 `draft_segments`、`draft_segment_generated_texts` 等字段
+  - `draft_segments`：初稿短句列表
+  - 初始化 `draft_segment_results` 等字段
 
 **同传式切块特点**：
 - 每个短句是一个完整但不冗长的意义单元
@@ -536,27 +560,13 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
 - 符合同传的习惯：一口气说得出口，但又不至于太长
 - 默认理想长度40字符，绝对最大长度80字符（超过则强制切分）
 
-#### 阶段2：批量生成所有原稿短句的初稿短句
-- **处理**：
-  1. 为每个原稿短句生成 draft prompt
-  2. 批量调用 Qwen2.5-7B 生成所有短句的初稿翻译
-  3. 保存每个短句的生成文本
-- **输出**：
-  - `draft_segment_generated_texts`：每个短句的生成文本列表
-
-#### 阶段3：对所有初稿短句进行格式检查
-- **处理**：
-  1. 对每个短句的生成文本进行格式检查
-  2. 提取 `<translate>` 标签中的内容
-  3. 计算每个短句的格式得分
-- **输出**：
-  - `draft_segments`：每个短句的翻译列表
-  - `draft_segment_format_scores`：每个短句的格式得分列表
-
 #### 阶段4：对所有初稿短句进行XCOMET评分
 - **处理**：
-  1. 为每个初稿短句构建二元组（`src`、`mt`），**不包含 `ref` 字段**
-  2. 批量调用 XCOMET 进行评分（不使用参考翻译）
+  1. 为每个初稿短句构建三元组（`src`、`mt`、`ref`）：
+     - `src`：**完整原文**（`src_text`）
+     - `mt`：初稿短句（`draft_segment`）
+     - `ref`：**完整参考翻译**（`tgt_text`）
+  2. 批量调用 XCOMET 进行评分（使用完整原文和完整参考翻译）
   3. 获取每个短句的得分和错误片段
   4. 汇总所有短句的评分（平均得分和合并的错误片段）
 - **输出**：
@@ -564,16 +574,16 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
   - `xcomet_draft`：整体初稿的汇总评分
 
 **关键特性**：
-- **不使用参考翻译**：XCOMET评分时只使用 `src` 和 `mt`，不包含 `ref` 字段
+- **使用完整原文和完整参考翻译**：XCOMET评分时使用完整原文（而非短句原文）和完整参考翻译，提供更多上下文信息
 - 短句级别的错误检测
 
 #### 阶段5：批量生成所有初稿短句的润色短句
 - **处理**：
   1. 为每个有错误的初稿短句生成 repair prompt
   2. Repair prompt 包含：
-     - `User: {src_segment}` - 原稿短句
+     - `User: {src_text}` - **完整原文**
      - `Draft Translation Segment: {draft_translation_segment}` - 初稿短句
-     - `Draft Source Segment: {draft_src_segment}` - 初稿短句对应的原文短句
+     - `Draft Source Segment: {ref_text}` - **完整参考翻译**
      - `Error Evaluation: {error_spans_json}` - 错误片段（JSON格式）
   3. 批量调用 Qwen 生成润色后的短句
   4. 提取润色短句的 `<translate>` 标签，失败则回退到初稿短句
@@ -586,12 +596,15 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
 ```
 A conversation between User and Assistant. The User asks for polishing a draft translation segment from {src_lang} to {tgt_lang}. The draft translation segment is part of a translation for a source text segment. The Assistant needs to polish this draft translation segment based on the source text segment, the draft translation segment, the original source text segment that the draft was translated from, and error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. 
 
-User: {src_segment}
+User: {src_text}
 Draft Translation Segment: {draft_translation_segment}
-Draft Source Segment: {draft_src_segment}
+Draft Source Segment: {ref_text}
 Error Evaluation: {error_spans_json}
 Assistant:
 ```
+
+**关键特性**：
+- **使用完整原文和完整参考翻译**：Repair prompt 包含完整原文和完整参考翻译，为模型提供更多上下文信息，有助于生成更准确的润色结果
 
 #### 阶段6：汇总终稿短句
 - **处理**：
@@ -617,9 +630,11 @@ Assistant:
   - `xcomet_final`：终稿的XCOMET评分结果
 
 **特点**：
-- 短句级别的处理
-- 初稿短句XCOMET评分不使用参考翻译
+- 不切分原文，先对完整原文生成初稿
+- 切分初稿翻译为短句，进行短句级别的处理
+- 初稿短句XCOMET评分使用完整原文和完整参考翻译（提供更多上下文）
 - 终稿XCOMET评分使用参考翻译
+- Repair prompt包含完整原文和完整参考翻译（提供更多上下文）
 - 只对有错误的短句进行润色
 - 如果任何初稿短句缺失，则没有终稿
 
@@ -629,11 +644,12 @@ Assistant:
 
 | 特性 | 基线模式 | 扩展模式 |
 |------|---------|---------|
-| **处理粒度** | 整句 | 短句 |
-| **初稿生成** | 整句生成 | 短句生成 |
-| **XCOMET评分** | 使用参考翻译 | 初稿短句不使用参考翻译，终稿使用参考翻译 |
+| **原文处理** | 不切分 | 不切分 |
+| **初稿生成** | 整句生成 | 整句生成（不切分原文） |
+| **初稿处理** | 直接使用 | 切分为短句 |
+| **XCOMET评分** | 使用参考翻译 | 初稿短句使用完整原文和完整参考翻译，终稿使用参考翻译 |
 | **错误检测** | 整句级别 | 短句级别 |
-| **修复生成** | 整句修复 | 短句修复 |
+| **修复生成** | 整句修复 | 短句修复（Repair prompt包含完整原文和完整参考翻译） |
 | **终稿合并** | 直接使用修复结果 | 合并所有短句 |
 | **失败处理** | 回退到初稿 | 回退到初稿短句，如果任何短句缺失则没有终稿 |
 

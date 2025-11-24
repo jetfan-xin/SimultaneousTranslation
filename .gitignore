@@ -37,6 +37,14 @@ ENV/
 data/train/parquet/*.parquet
 data/test/parquet/*.parquet
 *.parquet
+data/test/commonMT/
+data/test/CultureMT/
+data/test/DRT/
+data/test/flores_101/
+data/test/GuoFeng_Webnovel_Corpus/
+data/test/LITEVAL-CORPUS/
+data/test/RTT/
+results/*
 
 # 输出结果文件（不提交到GitHub，文件太大）
 # *.json

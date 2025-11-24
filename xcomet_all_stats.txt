@@ -1,0 +1,322 @@
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/test_baseline_commonmt_contextless.json
+[Stats] Draft格式正确率: 447/450 (99.3%)
+[Stats] Repair格式正确率: 345/450 (76.7%)
+[Stats] XCOMET Draft scores - Mean: 0.9437, Min: 0.3209, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.08
+[Stats] Avg. error spans per final sample: 0.91
+[Stats] XCOMET Final scores - Mean: 0.9503, Min: 0.3221, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 235/442 (53.2%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/test_baseline_commonmt_contextual.json
+[Stats] Draft格式正确率: 349/350 (99.7%)
+[Stats] Repair格式正确率: 268/350 (76.6%)
+[Stats] XCOMET Draft scores - Mean: 0.9060, Min: 0.1870, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.44
+[Stats] Avg. error spans per final sample: 1.26
+[Stats] XCOMET Final scores - Mean: 0.9185, Min: 0.1159, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 187/347 (53.9%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/test_baseline_commonmt_lexical.json
+[Stats] Draft格式正确率: 399/400 (99.8%)
+[Stats] Repair格式正确率: 286/400 (71.5%)
+[Stats] XCOMET Draft scores - Mean: 0.9353, Min: 0.2132, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.13
+[Stats] Avg. error spans per final sample: 0.95
+[Stats] XCOMET Final scores - Mean: 0.9372, Min: 0.2132, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 193/395 (48.9%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/test_baseline_flores101_de-en.json
+[Stats] Draft格式正确率: 1011/1012 (99.9%)
+[Stats] Repair格式正确率: 404/1012 (39.9%)
+[Stats] XCOMET Draft scores - Mean: 0.9731, Min: 0.1890, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 0.64
+[Stats] Avg. error spans per final sample: 0.49
+[Stats] XCOMET Final scores - Mean: 0.9755, Min: 0.6777, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 505/999 (50.6%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/test_baseline_flores101_zh-nl.json
+[Stats] Draft格式正确率: 990/1012 (97.8%)
+[Stats] Repair格式正确率: 839/1012 (82.9%)
+[Stats] XCOMET Draft scores - Mean: 0.8124, Min: 0.0395, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.76
+[Stats] Avg. error spans per final sample: 2.54
+[Stats] XCOMET Final scores - Mean: 0.8446, Min: 0.1261, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 554/969 (57.2%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_zh-nl.json
+[Stats] Draft格式正确率: 986/1012 (97.4%)
+[Stats] Repair格式正确率: 878/1012 (86.8%)
+[Stats] XCOMET Draft scores - Mean: 0.8021, Min: 0.1828, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.08
+[Stats] Avg. error spans per final sample: 2.73
+[Stats] XCOMET Final scores - Mean: 0.8332, Min: 0.1290, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 528/967 (54.6%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_en-vi.json
+[Stats] Draft格式正确率: 982/1012 (97.0%)
+[Stats] Repair格式正确率: 780/1012 (77.1%)
+[Stats] XCOMET Draft scores - Mean: 0.8490, Min: 0.0943, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.14
+[Stats] Avg. error spans per final sample: 1.90
+[Stats] XCOMET Final scores - Mean: 0.8721, Min: -0.0164, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 505/950 (53.2%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_fr-en.json
+[Stats] Draft格式正确率: 1010/1012 (99.8%)
+[Stats] Repair格式正确率: 362/1012 (35.8%)
+[Stats] XCOMET Draft scores - Mean: 0.9634, Min: 0.5170, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 0.61
+[Stats] Avg. error spans per final sample: 0.43
+[Stats] XCOMET Final scores - Mean: 0.9677, Min: 0.3951, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 507/1002 (50.6%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_nl-zh.json
+[Stats] Draft格式正确率: 998/1012 (98.6%)
+[Stats] Repair格式正确率: 902/1012 (89.1%)
+[Stats] XCOMET Draft scores - Mean: 0.8101, Min: 0.2166, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.53
+[Stats] Avg. error spans per final sample: 2.31
+[Stats] XCOMET Final scores - Mean: 0.8242, Min: 0.0716, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 528/986 (53.5%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_en-th.json
+[Stats] Draft格式正确率: 920/1012 (90.9%)
+[Stats] Repair格式正确率: 763/1012 (75.4%)
+[Stats] XCOMET Draft scores - Mean: 0.7540, Min: -0.0102, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.36
+[Stats] Avg. error spans per final sample: 2.16
+[Stats] XCOMET Final scores - Mean: 0.7955, Min: -0.0101, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 492/863 (57.0%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_th-zh.json
+[Stats] Draft格式正确率: 1008/1012 (99.6%)
+[Stats] Repair格式正确率: 927/1012 (91.6%)
+[Stats] XCOMET Draft scores - Mean: 0.7841, Min: 0.1377, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.55
+[Stats] Avg. error spans per final sample: 2.37
+[Stats] XCOMET Final scores - Mean: 0.7977, Min: 0.0975, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 535/1001 (53.4%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_vi-en.json
+[Stats] Draft格式正确率: 1010/1012 (99.8%)
+[Stats] Repair格式正确率: 518/1012 (51.2%)
+[Stats] XCOMET Draft scores - Mean: 0.9425, Min: -0.0287, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 0.96
+[Stats] Avg. error spans per final sample: 0.67
+[Stats] XCOMET Final scores - Mean: 0.9506, Min: -0.0092, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 529/1003 (52.7%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_zh-de.json
+[Stats] Draft格式正确率: 985/1012 (97.3%)
+[Stats] Repair格式正确率: 884/1012 (87.4%)
+[Stats] XCOMET Draft scores - Mean: 0.8955, Min: -0.0107, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.38
+[Stats] Avg. error spans per final sample: 3.09
+[Stats] XCOMET Final scores - Mean: 0.9089, Min: 0.1984, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 528/965 (54.7%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_zh-en.json
+[Stats] Draft格式正确率: 1006/1012 (99.4%)
+[Stats] Repair格式正确率: 528/1012 (52.2%)
+[Stats] XCOMET Draft scores - Mean: 0.9465, Min: 0.3789, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.03
+[Stats] Avg. error spans per final sample: 0.81
+[Stats] XCOMET Final scores - Mean: 0.9518, Min: 0.4110, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 522/1002 (52.1%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_de-zh.json
+[Stats] Draft格式正确率: 995/1012 (98.3%)
+[Stats] Repair格式正确率: 896/1012 (88.5%)
+[Stats] XCOMET Draft scores - Mean: 0.8417, Min: 0.1952, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.75
+[Stats] Avg. error spans per final sample: 2.47
+[Stats] XCOMET Final scores - Mean: 0.8575, Min: 0.2025, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 520/981 (53.0%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_cs-zh.json
+[Stats] Draft格式正确率: 993/1012 (98.1%)
+[Stats] Repair格式正确率: 905/1012 (89.4%)
+[Stats] XCOMET Draft scores - Mean: 0.7832, Min: 0.2433, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.56
+[Stats] Avg. error spans per final sample: 2.41
+[Stats] XCOMET Final scores - Mean: 0.8030, Min: 0.0990, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 521/980 (53.2%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_zh-ru.json
+[Stats] Draft格式正确率: 927/1012 (91.6%)
+[Stats] Repair格式正确率: 664/1012 (65.6%)
+[Stats] XCOMET Draft scores - Mean: 0.8323, Min: 0.1510, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.75
+[Stats] Avg. error spans per final sample: 1.50
+[Stats] XCOMET Final scores - Mean: 0.8615, Min: 0.0317, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 506/891 (56.8%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_fr-zh.json
+[Stats] Draft格式正确率: 995/1012 (98.3%)
+[Stats] Repair格式正确率: 915/1012 (90.4%)
+[Stats] XCOMET Draft scores - Mean: 0.7926, Min: 0.1728, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.62
+[Stats] Avg. error spans per final sample: 2.37
+[Stats] XCOMET Final scores - Mean: 0.8025, Min: 0.1143, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 518/988 (52.4%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_nl-en.json
+[Stats] Draft格式正确率: 1007/1012 (99.5%)
+[Stats] Repair格式正确率: 332/1012 (32.8%)
+[Stats] XCOMET Draft scores - Mean: 0.9645, Min: 0.3091, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 0.51
+[Stats] Avg. error spans per final sample: 0.33
+[Stats] XCOMET Final scores - Mean: 0.9693, Min: 0.4108, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 514/1003 (51.2%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_zh-fr.json
+[Stats] Draft格式正确率: 994/1012 (98.2%)
+[Stats] Repair格式正确率: 796/1012 (78.7%)
+[Stats] XCOMET Draft scores - Mean: 0.8313, Min: 0.1630, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.25
+[Stats] Avg. error spans per final sample: 1.92
+[Stats] XCOMET Final scores - Mean: 0.8462, Min: 0.0859, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 523/976 (53.6%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_vi-zh.json
+[Stats] Draft格式正确率: 1002/1012 (99.0%)
+[Stats] Repair格式正确率: 896/1012 (88.5%)
+[Stats] XCOMET Draft scores - Mean: 0.8116, Min: 0.2810, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.50
+[Stats] Avg. error spans per final sample: 2.27
+[Stats] XCOMET Final scores - Mean: 0.8268, Min: 0.0223, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 522/991 (52.7%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_en-tr.json
+[Stats] Draft格式正确率: 981/1012 (96.9%)
+[Stats] Repair格式正确率: 886/1012 (87.5%)
+[Stats] XCOMET Draft scores - Mean: 0.6153, Min: 0.0678, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.92
+[Stats] Avg. error spans per final sample: 2.70
+[Stats] XCOMET Final scores - Mean: 0.6612, Min: 0.0446, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 552/958 (57.6%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_th-en.json
+[Stats] Draft格式正确率: 1012/1012 (100.0%)
+[Stats] Repair格式正确率: 546/1012 (54.0%)
+[Stats] XCOMET Draft scores - Mean: 0.9332, Min: 0.1181, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.02
+[Stats] Avg. error spans per final sample: 0.90
+[Stats] XCOMET Final scores - Mean: 0.9338, Min: 0.0318, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 509/1006 (50.6%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_zh-ja.json
+[Stats] Draft格式正确率: 973/1012 (96.1%)
+[Stats] Repair格式正确率: 719/1012 (71.0%)
+[Stats] XCOMET Draft scores - Mean: 0.8211, Min: 0.0425, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.91
+[Stats] Avg. error spans per final sample: 1.70
+[Stats] XCOMET Final scores - Mean: 0.8378, Min: 0.0240, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 521/937 (55.6%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_en-cs.json
+[Stats] Draft格式正确率: 994/1012 (98.2%)
+[Stats] Repair格式正确率: 898/1012 (88.7%)
+[Stats] XCOMET Draft scores - Mean: 0.7075, Min: 0.0770, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.34
+[Stats] Avg. error spans per final sample: 3.00
+[Stats] XCOMET Final scores - Mean: 0.7519, Min: 0.0053, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 541/971 (55.7%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_cs-en.json
+[Stats] Draft格式正确率: 1010/1012 (99.8%)
+[Stats] Repair格式正确率: 427/1012 (42.2%)
+[Stats] XCOMET Draft scores - Mean: 0.9524, Min: 0.2064, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 0.72
+[Stats] Avg. error spans per final sample: 0.49
+[Stats] XCOMET Final scores - Mean: 0.9598, Min: 0.0947, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 522/1000 (52.2%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_flores101_tr-en.json
+[Stats] Draft格式正确率: 1005/1012 (99.3%)
+[Stats] Repair格式正确率: 562/1012 (55.5%)
+[Stats] XCOMET Draft scores - Mean: 0.9081, Min: 0.0862, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.12
+[Stats] Avg. error spans per final sample: 0.79
+[Stats] XCOMET Final scores - Mean: 0.9234, Min: 0.1745, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 551/995 (55.4%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_culturemt_en-te.json
+[Stats] Draft格式正确率: 687/754 (91.1%)
+[Stats] Repair格式正确率: 254/754 (33.7%)
+[Stats] XCOMET Draft scores - Mean: 0.3487, Min: 0.0111, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 0.96
+[Stats] Avg. error spans per final sample: 0.93
+[Stats] XCOMET Final scores - Mean: 0.3552, Min: 0.0193, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 336/653 (51.5%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_wmt23_de-en.json
+[Stats] Draft格式正确率: 539/549 (98.2%)
+[Stats] Repair格式正确率: 401/549 (73.0%)
+[Stats] XCOMET Draft scores - Mean: 0.8737, Min: 0.1504, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.26
+[Stats] Avg. error spans per final sample: 1.88
+[Stats] XCOMET Final scores - Mean: 0.8801, Min: 0.1177, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 271/532 (50.9%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_wmt24_en-ja.json
+[Stats] Draft格式正确率: 978/997 (98.1%)
+[Stats] Repair格式正确率: 769/997 (77.1%)
+[Stats] XCOMET Draft scores - Mean: 0.6537, Min: 0.0801, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.31
+[Stats] Avg. error spans per final sample: 2.94
+[Stats] XCOMET Final scores - Mean: 0.6836, Min: -0.0307, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 486/911 (53.3%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_wmt24_en-zh.json
+[Stats] Draft格式正确率: 977/997 (98.0%)
+[Stats] Repair格式正确率: 883/997 (88.6%)
+[Stats] XCOMET Draft scores - Mean: 0.7312, Min: 0.1688, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.19
+[Stats] Avg. error spans per final sample: 2.99
+[Stats] XCOMET Final scores - Mean: 0.7470, Min: 0.0738, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 511/962 (53.1%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_culturemt_en-es.json
+[Stats] Draft格式正确率: 1564/1580 (99.0%)
+[Stats] Repair格式正确率: 1244/1580 (78.7%)
+[Stats] XCOMET Draft scores - Mean: 0.8226, Min: 0.0849, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.77
+[Stats] Avg. error spans per final sample: 2.37
+[Stats] XCOMET Final scores - Mean: 0.8406, Min: 0.0893, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 785/1499 (52.4%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_rtt_en-de.json
+[Stats] Draft格式正确率: 492/500 (98.4%)
+[Stats] Repair格式正确率: 472/500 (94.4%)
+[Stats] XCOMET Draft scores - Mean: 0.8516, Min: 0.1455, Max: 0.9971
+[Stats] Avg. error spans per draft sample: 6.05
+[Stats] Avg. error spans per final sample: 5.51
+[Stats] XCOMET Final scores - Mean: 0.8724, Min: 0.3453, Max: 0.9971
+[Stats] 终稿改进初稿的样本数: 274/479 (57.2%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_wmt23_zh-en.json
+[Stats] Draft格式正确率: 1955/1976 (98.9%)
+[Stats] Repair格式正确率: 1505/1976 (76.2%)
+[Stats] XCOMET Draft scores - Mean: 0.8557, Min: 0.1202, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.23
+[Stats] Avg. error spans per final sample: 1.92
+[Stats] XCOMET Final scores - Mean: 0.8638, Min: 0.0592, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 1015/1937 (52.4%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_culturemt_en-hi.json
+[Stats] Draft格式正确率: 1044/1086 (96.1%)
+[Stats] Repair格式正确率: 778/1086 (71.6%)
+[Stats] XCOMET Draft scores - Mean: 0.3376, Min: 0.0114, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.29
+[Stats] Avg. error spans per final sample: 3.27
+[Stats] XCOMET Final scores - Mean: 0.3640, Min: -0.0072, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 517/956 (54.1%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results/test_baseline_culturemt_en-ta.json
+[Stats] Draft格式正确率: 613/677 (90.5%)
+[Stats] Repair格式正确率: 232/677 (34.3%)
+[Stats] XCOMET Draft scores - Mean: 0.2614, Min: -0.0576, Max: 0.9485
+[Stats] Avg. error spans per draft sample: 0.94
+[Stats] Avg. error spans per final sample: 0.79
+[Stats] XCOMET Final scores - Mean: 0.2651, Min: -0.0437, Max: 0.9480
+[Stats] 终稿改进初稿的样本数: 303/593 (51.1%)

@@ -96,7 +96,10 @@ def build_cases() -> Dict[str, Dict[str, Any]]:
         "The company announced a new policy to support remote workers during the winter, ",
         "and promised additional financial assistance for employees living in colder regions.",
     ]
-
+    ref1_segs = [
+        "公司宣布了一项新政策，在冬季为远程办公员工提供支持，",
+        "并承诺为居住在更寒冷地区的员工提供额外的经济补助。",
+    ]
     # GOOD: 忠实翻译，两段
     mt1_segs_good = [
         "公司宣布了一项新政策，在冬季为远程办公员工提供支持。",
@@ -116,6 +119,7 @@ def build_cases() -> Dict[str, Dict[str, Any]]:
         "src_full": src1,
         "ref_full": ref1,
         "src_segs": src1_segs,
+        "ref_segs": ref1_segs,
         "mt_full_good": mt1_full_good,
         "mt_full_bad": mt1_full_bad,
         "mt_segs_good": mt1_segs_good,
@@ -134,7 +138,10 @@ def build_cases() -> Dict[str, Dict[str, Any]]:
         "But the victim's brother says he can't think of anyone who would want to hurt him, ",
         "saying, \"Things were finally going well for him.\"",
     ]
-
+    s2_ref_segs = [
+        "但受害人的哥哥表示想不出有谁会想要加害于他，",
+        "并称“一切终于好起来了。”",
+    ]
     # GOOD：忠实翻译
     s2_mt_segs_good = [
         "但受害人的哥哥表示想不出有谁会想要加害于他，",
@@ -154,6 +161,7 @@ def build_cases() -> Dict[str, Dict[str, Any]]:
         "src_full": s2_src,
         "ref_full": s2_ref,
         "src_segs": s2_src_segs,
+        "ref_segs": s2_ref_segs,
         "mt_full_good": s2_mt_full_good,
         "mt_full_bad": s2_mt_full_bad,
         "mt_segs_good": s2_mt_segs_good,
@@ -162,18 +170,20 @@ def build_cases() -> Dict[str, Dict[str, Any]]:
 
     # ----- Case 3: index=2 -----
     s3_src = (
-        "The body found at the Westfield Mall Wednesday morning was identified as 28-year-old "
-        "San Francisco resident Frank Galicia, the San Francisco Medical Examiner's Office said."
+        "The body found at the Westfield Mall Wednesday morning was identified as 28-year-old San Francisco resident Frank Galicia, "
+        "the San Francisco Medical Examiner's Office said."
     )
     s3_ref = "旧金山验尸官办公室表示，周三早上于西田购物中心发现的尸体确认为28岁旧金山居民 Frank Galicia。"
 
     # 源端分句（前半“办公室表示”，后半具体信息）
     s3_src_segs = [
         "The San Francisco Medical Examiner's Office said ",
-        "the body found at the Westfield Mall Wednesday morning was identified as "
-        "28-year-old San Francisco resident Frank Galicia.",
+        "the body found at the Westfield Mall Wednesday morning was identified as 28-year-old San Francisco resident Frank Galicia.",
     ]
-
+    s3_ref_segs = [
+        "旧金山验尸官办公室表示，",
+        "周三早上于西田购物中心发现的尸体确认为28岁旧金山居民 Frank Galicia。",
+    ]
     # GOOD：忠实翻译
     s3_mt_segs_good = [
         "旧金山验尸官办公室表示，",
@@ -193,6 +203,7 @@ def build_cases() -> Dict[str, Dict[str, Any]]:
         "src_full": s3_src,
         "ref_full": s3_ref,
         "src_segs": s3_src_segs,
+        "ref_segs": s3_ref_segs,
         "mt_full_good": s3_mt_full_good,
         "mt_full_bad": s3_mt_full_bad,
         "mt_segs_good": s3_mt_segs_good,
@@ -243,24 +254,38 @@ def run_strategy_2(xcomet: XCOMETLoader, case: Dict[str, Any]):
 
     - XCOMET(S_seg, MT_seg) for GOOD and BAD, using manually aligned src_segs & mt_segs.
     """
+    
     label = case["label"]
     src_segs = case["src_segs"]
+    ref_segs = case["ref_segs"]
     mt_segs_good = case["mt_segs_good"]
     mt_segs_bad = case["mt_segs_bad"]
-
+    
     pretty(f"Strategy 2: {label}  |  S_seg + MT_seg (aligned)")
 
     # GOOD
-    triplets_good = [{"src": s, "mt": m} for s, m in zip(src_segs, mt_segs_good)]
-    print("\n[2A] GOOD segments")
-    res_good = xcomet.predict(triplets_good)
-    print_results(triplets_good, res_good)
+    print("\n[2.1-GOOD] WITHOUT ref")
+    triplets_g = [{"src": s, "mt": m} for s, m in zip(src_segs, mt_segs_good)]
+    res_g = xcomet.predict(triplets_g)
+    print_results(triplets_g, res_g)
+
+
+    print("\n[2.2-GOOD] WITH ref")
+    triplets_g_r = [{"src": s, "mt": m, "ref": r} for s, m, r in zip(src_segs, mt_segs_good,ref_segs)]
+    res_g_r = xcomet.predict(triplets_g_r)
+    print_results(triplets_g_r, res_g_r)
+
 
     # BAD
-    triplets_bad = [{"src": s, "mt": m} for s, m in zip(src_segs, mt_segs_bad)]
-    print("\n[2B] BAD segments")
-    res_bad = xcomet.predict(triplets_bad)
-    print_results(triplets_bad, res_bad)
+    print("\n[2.1-BAD] WITHOUT ref")
+    triplets_b = [{"src": s, "mt": m} for s, m in zip(src_segs, mt_segs_bad)]
+    res_b = xcomet.predict(triplets_b)
+    print_results(triplets_b, res_b)
+
+    print("\n[2.2-BAD] WITH ref")
+    triplets_b_r = [{"src": s, "mt": m, "ref": r} for s, m, r in zip(src_segs, mt_segs_bad, ref_segs)]
+    res_b_r = xcomet.predict(triplets_b_r)
+    print_results(triplets_b_r, res_b_r)
 
     print("\n[Note] 看每一对应分句上，GOOD vs BAD 是否被 XCOMET 拉开，"
           "这对应“先切 S 再翻译”的评估可行性。")
@@ -327,3 +352,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# 运行方法： 
+# export WORD_QE_CKPT=/ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt
+# CUDA_VISIBLE_DEVICES=4 python experiments/xcomet_compare_strategies.py

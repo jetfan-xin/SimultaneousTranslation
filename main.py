@@ -3,7 +3,7 @@
 """
 SimultaneousTranslation主执行脚本
 实现：
-1. 获取数据集（MT_Grpo的data/train）
+1. 获取数据集（SimultaneousTranslation 的 data/test/used 下已生成的数据集）
 2. 转换数据集为parquet格式，并根据draft mode模板生成完整的prompt文本（包含instruction、格式说明和用户输入）
 3. 在外部加载XCOMET模型，方便后续评分环节直接调用
 4. 调用Qwen2.5-7B，使用步骤2生成的prompt，Mode=draft，生成并获取回答
@@ -30,30 +30,111 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 # 添加当前目录到路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from data.process_data import read_jsonl_files, preprocess_data, make_prefix
+from data.process_data import read_jsonl_files, make_prefix
 from transformers import AutoTokenizer
 from xcomet_loader import XCOMETLoader
 from qwen_generator import QwenGenerator
 from utils import check_and_extract_translate_tag, format_error_spans_for_prompt, split_into_segments
 
+def _parse_gpu_list(gpu_str: Optional[str]) -> List[int]:
+    """把类似 '0,1,4' 的字符串转成 [0,1,4]，None 或 '' 返回空列表。"""
+    if not gpu_str:
+        return []
+    return [int(x.strip()) for x in gpu_str.split(",") if x.strip() != ""]
 
-def load_dataset_from_train_files(train_files: List[str], base_dir: str = None):
+
+def map_physical_to_logical(physical_gpus: Optional[str]) -> List[int]:
+    """
+    把“物理 GPU 序号”（用户通过 --xcomet_gpus / --qwen_gpus 传进来的）
+    映射成当前进程下的“逻辑 GPU id”（torch / Lightning / vLLM 看见的那套）。
+
+    规则：
+    - 如果没有设置 CUDA_VISIBLE_DEVICES：物理 == 逻辑，直接返回用户的列表；
+    - 如果设置了 CUDA_VISIBLE_DEVICES，例如 '1,2,4'：
+        这一串就是“可见的物理 GPU 列表”。
+        我们把用户传进来的物理 id 映射到这个列表里的 index：
+          CUDA_VISIBLE_DEVICES=1,2,4
+          → 逻辑 0 -> 物理 1
+          → 逻辑 1 -> 物理 2
+          → 逻辑 2 -> 物理 4
+        例如用户传 --xcomet_gpus 1,4 → 逻辑 id = [0,2]
+
+    映射失败（用户给了不在可见列表里的物理 GPU，比如 env=1,2,4 但传 0）
+    就直接报错。
+    """
+    phys_list = _parse_gpu_list(physical_gpus)
+    if not phys_list:
+        return []
+
+    visible_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+    # Case 1: 未设 CUDA_VISIBLE_DEVICES，物理 == 逻辑
+    if not visible_env:
+        return phys_list
+
+    visible_phys = _parse_gpu_list(visible_env)  # 例如 [1,2,4]
+
+    logical_ids: List[int] = []
+    for g in phys_list:
+        if g not in visible_phys:
+            raise ValueError(
+                f"[GPU Mapping Error] 物理 GPU {g} 不在 CUDA_VISIBLE_DEVICES={visible_env} 中，"
+                f"请确保二者一致，或取消外部的 CUDA_VISIBLE_DEVICES 限制。"
+            )
+        logical_ids.append(visible_phys.index(g))
+    return logical_ids
+
+
+def report_gpu_mapping(role: str, phys_gpus: Optional[str], logical_ids: List[int]):
+    """打印一下映射情况（方便你 debug）。"""
+    visible_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
+    if not phys_gpus:
+        print(f"[{role}] 使用 CPU（未指定 --{role.lower()}_gpus）")
+        return
+
+    print(f"[{role}] 用户传入的 GPU（物理）: {phys_gpus}")
+    if visible_env:
+        print(f"[{role}] 当前 CUDA_VISIBLE_DEVICES = {visible_env}")
+        print(f"[{role}] 映射后的逻辑 GPU id = {logical_ids}")
+    else:
+        print(f"[{role}] 未设置 CUDA_VISIBLE_DEVICES，物理 == 逻辑 = {logical_ids}")
+
+
+def log_stats(msg: str, output_file: str = None):
+    """
+    同时打印到终端 & 追加写入一个全局的 stats 日志 txt。
+    如果提供了 output_file，会根据它所在目录创建日志文件；
+    否则默认写在当前工作目录。
+    """
+    print(msg)
+
+    # 确定日志文件路径（比如和 output_file 在同一目录）
+    if output_file:
+        log_dir = os.path.dirname(os.path.abspath(output_file))
+    else:
+        log_dir = os.getcwd()
+
+    log_path = os.path.join(log_dir, "xcomet_all_stats.txt")
+
+    # 追加写入
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(msg + "\n")
+        
+def load_dataset_from_test_files(test_files: List[str], base_dir: str = None):
     """
     从训练文件中加载数据集
     
     Args:
-        train_files: 训练文件路径列表
+        test_files: 训练文件路径列表
         base_dir: 基础目录，如果文件路径是相对路径则基于此目录
     
     Returns:
         处理后的数据列表
     """
     if base_dir:
-        train_files = [os.path.join(base_dir, f) if not os.path.isabs(f) else f for f in train_files]
+        test_files = [os.path.join(base_dir, f) if not os.path.isabs(f) else f for f in test_files]
     
-    print(f"[Dataset] Loading training files: {train_files}")
-    data = read_jsonl_files(train_files)
-    processed_data = preprocess_data(data)
+    print(f"[Dataset] Loading training files: {test_files}")
+    processed_data = read_jsonl_files(test_files)
     print(f"[Dataset] Loaded {len(processed_data)} samples")
     return processed_data
 
@@ -87,7 +168,7 @@ def process_data_for_qwen(data: List[Dict], tokenizer_path: str, tokenizer=None,
         
         processed_sample = {
             "data_source": example.get('data_source', 'unknown'),
-            "lang_pair": example.get('lg', 'en-zh'),
+            "lang_pair": example.get('lg', 'unknown-unkown'),
             "src_text": example.get('src_text', ''),
             "tgt_text": example.get('tgt_text', ''),
             "prompt": prompt,
@@ -133,10 +214,14 @@ def main():
     parser = argparse.ArgumentParser(description='SimultaneousTranslation主脚本')
     
     # 数据集相关参数
-    parser.add_argument('--data_dir', type=str, default='data', help='数据目录')
-    parser.add_argument('--train_files', nargs='+', 
-                       default=['train/json/train_enzh_6565.jsonl', 'train/json/train_zhen_6565.jsonl'],
-                       help='训练JSONL文件路径（相对于data_dir）')
+    parser.add_argument('--data_dir', type=str, default='data', help='数据根目录（默认项目根目录下的 data）')
+    parser.add_argument(
+        '--test_files',
+        nargs='+',
+        default=None,
+        help='（可选）要使用的数据集文件名，位于 data/test/used 下；'
+             '如果不指定，将自动扫描 data/test/used 目录下所有 *.parquet / *.jsonl'
+    )
     parser.add_argument('--tokenizer_path', type=str, default='Qwen/Qwen2.5-7B-Instruct',
                        help='Tokenizer路径或HuggingFace模型ID')
     parser.add_argument('--pipeline_mode', type=str, choices=['baseline', 'extended'], default='baseline',
@@ -178,17 +263,28 @@ def main():
                        help='处理的样本数量（None表示处理全部）')
     
     # 输入/输出参数
-    parser.add_argument('--input_results_file', type=str, default=None,
-                       help='输入results.json文件路径（如果提供，将从该文件读取已有的draft结果进行refinement）')
     parser.add_argument('--output_file', type=str, default=None,
                        help='输出文件路径（JSON格式，保存生成结果）')
-    parser.add_argument('--processed_data_file', type=str, default=None,
-                       help='（已弃用）处理后的数据文件路径。现在会自动为每个数据集文件生成对应的parquet文件')
     
     args = parser.parse_args()
     extended_mode = args.pipeline_mode == 'extended'
+
+    # ===== 统一解析 GPU 参数：把物理 id → 逻辑 id =====
+    # 注意：这里不改 CUDA_VISIBLE_DEVICES，只是做一个“解释层”。
+    try:
+        xcomet_logical_gpus = map_physical_to_logical(args.xcomet_gpus)
+        qwen_logical_gpus = map_physical_to_logical(args.qwen_gpus)
+    except ValueError as e:
+        # 用户传了不在 CUDA_VISIBLE_DEVICES 里的物理 GPU，直接报错退出
+        print(str(e))
+        sys.exit(1)
+
+    # 打印一下映射情况（可选）
+    report_gpu_mapping("XCOMET", args.xcomet_gpus, xcomet_logical_gpus)
+    report_gpu_mapping("Qwen", args.qwen_gpus, qwen_logical_gpus)
+
     
-    # ========== 0. GPU环境检测和分配 ==========
+    # ========== 0. GPU环境检测和分配（仅打印，不修改环境） ==========
     print("\n" + "="*60)
     print("GPU环境检测和分配")
     print("="*60)
@@ -201,1380 +297,993 @@ def main():
             gpu_memory = torch.cuda.get_device_properties(i).total_memory / 1024**3
             print(f"  GPU {i}: {gpu_name} ({gpu_memory:.2f} GB)")
         
-        # 显示GPU分配计划
+        # 显示当前的 GPU 使用计划（这里只是打印，不做真正绑定）
         original_cuda_env = os.environ.get("CUDA_VISIBLE_DEVICES", None)
         
+        # XCOMET 计划使用
         if args.xcomet_cpu:
-            print(f"\n[XCOMET] 将使用: CPU（--xcomet_cpu）")
+            print(f"\n[XCOMET] 计划使用: CPU（--xcomet_cpu）")
         elif args.xcomet_gpus:
-            print(f"\n[XCOMET] 将使用GPU: {args.xcomet_gpus}")
+            print(f"\n[XCOMET] 计划使用物理 GPU: {args.xcomet_gpus}")
         elif original_cuda_env and not args.qwen_gpus:
-            print(f"\n[XCOMET] 将使用GPU: {original_cuda_env}（环境变量CUDA_VISIBLE_DEVICES）")
+            print(f"\n[XCOMET] 计划使用环境变量 CUDA_VISIBLE_DEVICES={original_cuda_env}")
         else:
-            print(f"\n[XCOMET] 将使用: CPU（默认）")
+            print(f"\n[XCOMET] 计划使用: CPU（默认）")
         
+        # Qwen 计划使用
         if args.qwen_cpu:
-            print(f"[Qwen] 将使用: CPU（--qwen_cpu）")
+            print(f"[Qwen] 计划使用: CPU（--qwen_cpu）")
         elif args.qwen_gpus:
-            print(f"[Qwen] 将使用GPU: {args.qwen_gpus}")
+            print(f"[Qwen] 计划使用物理 GPU: {args.qwen_gpus}")
         elif original_cuda_env and not args.xcomet_gpus:
-            print(f"[Qwen] 将使用GPU: {original_cuda_env}（环境变量CUDA_VISIBLE_DEVICES）")
+            print(f"[Qwen] 计划使用环境变量 CUDA_VISIBLE_DEVICES={original_cuda_env}")
         else:
-            print(f"[Qwen] 将使用: CPU（默认）")
+            print(f"[Qwen] 计划使用: CPU（默认）")
     else:
         print("✗ 未检测到GPU，将使用CPU模式（非常慢）")
     
-    # ========== 检查是否从results.json读取数据 ==========
-    if args.input_results_file:
-        # 从results.json读取已有数据，只进行refinement
-        print("\n" + "="*60)
-        print("从results.json读取数据，进行refinement处理")
-        print("="*60)
-        input_path = args.input_results_file if os.path.isabs(args.input_results_file) else os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), args.input_results_file
-        )
-        print(f"[Input] Loading results from: {input_path}")
-        with open(input_path, 'r', encoding='utf-8') as f:
-            existing_results = json.load(f)
-        print(f"[Input] Loaded {len(existing_results)} results from results.json")
-        
-        # 加载tokenizer（后续repair mode需要使用）
-        print(f"[Process] Loading tokenizer from {args.tokenizer_path}...")
-        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path, trust_remote_code=True)
-        
-        # 将results.json转换为DataFrame格式以便后续处理
-        dataset_df = pd.DataFrame(existing_results)
-        
-        # 跳过步骤1-4，直接进入步骤5-8（格式检查和refinement）
-        skip_draft_generation = True
+
+    # ========== 1. 获取数据集 ==========
+    print("\n" + "="*60)
+    print("步骤1: 获取数据集（data/test/used 下的已生成数据）")
+    print("="*60)
+
+    # data_dir 仍然是项目根目录下的 data
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    data_dir = args.data_dir if os.path.isabs(args.data_dir) else os.path.join(root_dir, args.data_dir)
+    used_dir = Path(data_dir) / "test" / "used"
+
+    if not used_dir.exists():
+        raise FileNotFoundError(f"测试数据目录不存在: {used_dir}")
+
+    # 1）优先使用参数里显式指定的文件名（相对于 data/test/used）
+    if args.test_files:
+        test_files = [str(used_dir / f) for f in args.test_files]
     else:
-        # 正常流程：从数据集文件读取
-        # ========== 1. 获取数据集 ==========
-        print("\n" + "="*60)
-        print("步骤1: 获取数据集")
-        print("="*60)
-        data_dir = args.data_dir if os.path.isabs(args.data_dir) else os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), args.data_dir
-        )
-        train_files = [os.path.join(data_dir, f) for f in args.train_files]
-        
-        # ========== 2. 转换数据集为Qwen格式并生成prompt ==========
-        print("\n" + "="*60)
-        print("步骤2: 转换数据集为parquet格式并生成prompt（draft mode，复用base模板）")
-        print("="*60)
-        
-        # 加载tokenizer（用于生成prompt和后续repair mode）
-        print(f"[Process] Loading tokenizer from {args.tokenizer_path}...")
-        tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path, trust_remote_code=True)
-        
-        # 为每个训练文件分别处理并保存parquet
-        all_datasets = []
-        parquet_files = []
-        
-        # 创建parquet保存目录：data/train/parquet
-        parquet_dir = Path(args.data_dir) / "train" / "parquet"
-        parquet_dir.mkdir(parents=True, exist_ok=True)
-        print(f"[Process] Parquet文件将保存到: {parquet_dir}")
-        
-        for train_file in train_files:
-            # 生成对应的parquet文件路径（保存到data/train/parquet目录，文件名不变，扩展名改为.parquet）
-            train_file_path = Path(train_file)
-            parquet_filename = train_file_path.stem + '.parquet'  # 保持原文件名，只改扩展名
-            parquet_file_path = parquet_dir / parquet_filename
-            parquet_files.append(str(parquet_file_path))
-            
-            # 检查parquet文件是否存在
-            if parquet_file_path.exists():
-                print(f"[Process] 发现已处理的parquet文件: {parquet_file_path}")
-                print(f"[Process] 直接加载，跳过数据转换...")
-                dataset = Dataset.from_parquet(str(parquet_file_path))
-                print(f"[Process] 成功加载 {len(dataset)} 个样本")
-            else:
-                # 如果parquet文件不存在，读取原始jsonl文件并转换
-                print(f"[Process] 未找到parquet文件，将转换并保存: {parquet_file_path}")
-                
-                # 读取该文件的原始数据
-                file_data = []
-                with open(train_file, 'r', encoding='utf-8') as f:
-                    for line_num, line in enumerate(f, 1):
-                        try:
-                            file_data.append(json.loads(line))
-                        except json.JSONDecodeError as e:
-                            print(f"[Line {line_num}] JSON parse failed → Line content: {repr(line)}")
-                
-                # 预处理数据
-                processed_file_data = preprocess_data(file_data)
-                
-                # 转换为Qwen格式并保存
-                dataset = process_data_for_qwen(
-                    processed_file_data,
-                    tokenizer_path=args.tokenizer_path,
-                    tokenizer=tokenizer,
-                    output_file=str(parquet_file_path)
-                )
-                print(f"[Process] 成功转换并保存 {len(dataset)} 个样本到 {parquet_file_path}")
-            
-            # 为每个数据集添加文件来源信息，并重新编号索引
-            dataset = dataset.map(lambda example, idx: {**example, "index": idx, "source_file": train_file_path.name}, with_indices=True)
-            all_datasets.append(dataset)
-        
-        # 合并所有数据集
-        if len(all_datasets) > 1:
-            print(f"[Process] 合并 {len(all_datasets)} 个数据集...")
-            from datasets import concatenate_datasets
-            dataset = concatenate_datasets(all_datasets)
-            # 重新编号索引（合并后从0开始连续编号）
-            dataset = dataset.map(lambda example, idx: {**example, "index": idx}, with_indices=True)
-            print(f"[Process] 合并后共 {len(dataset)} 个样本")
+        # 2）否则自动扫描 data/test/used 目录：
+        #    - 如果有 *.parquet，就全部用 parquet
+        #    - 否则用所有 *.jsonl
+        parquet_candidates = sorted(used_dir.glob("*.parquet"))
+        jsonl_candidates = sorted(used_dir.glob("*.jsonl"))
+
+        if parquet_candidates:
+            test_files = [str(p) for p in parquet_candidates]
+            print(f"[Dataset] 在 {used_dir} 下发现 {len(test_files)} 个 parquet 文件，将直接加载：")
+        elif jsonl_candidates:
+            test_files = [str(p) for p in jsonl_candidates]
+            print(f"[Dataset] 在 {used_dir} 下发现 {len(test_files)} 个 jsonl 文件，将先转换为 parquet：")
         else:
-            dataset = all_datasets[0]
-            # 确保索引从0开始
-            if len(dataset) > 0:
-                dataset = dataset.map(lambda example, idx: {**example, "index": idx}, with_indices=True)
-        
-        # 如果指定了num_samples，只使用前N个样本
-        if args.num_samples and len(dataset) > args.num_samples:
-            print(f"[Dataset] 限制使用前 {args.num_samples} 个样本（总共 {len(dataset)} 个）")
-            dataset = dataset.select(range(args.num_samples))
-            # 重新编号索引
+            raise FileNotFoundError(f"在 {used_dir} 下没有找到任何 *.parquet 或 *.jsonl 文件")
+
+    print(f"[Dataset] 使用的文件列表：")
+    for p in test_files:
+        print(f"  - {p}")
+
+    # ========== 2. 转换数据集为Qwen格式并生成prompt ==========
+    print("\n" + "="*60)
+    print("步骤2: 转换数据集为parquet格式并生成prompt（draft mode，复用rl模板）")
+    print("="*60)
+
+    # 加载tokenizer（用于生成prompt和后续repair mode）
+    print(f"[Process] Loading tokenizer from {args.tokenizer_path}...")
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path, trust_remote_code=True)
+
+    # 为每个数据文件分别处理并保存parquet
+    all_datasets = []
+    parquet_files = []
+
+    # 这里不再用 data/train/parquet，而是直接把 parquet 放在 data/test/used 下面
+    parquet_dir = used_dir
+    parquet_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[Process] Parquet文件将保存到: {parquet_dir}")
+
+    for train_file in test_files:
+        data_file_path = Path(train_file)
+        parquet_filename = data_file_path.stem + '.parquet'
+        parquet_file_path = parquet_dir / parquet_filename
+        parquet_files.append(str(parquet_file_path))
+
+        # 如果本身就是 parquet，并且已经在 used_dir 里，直接加载
+        if data_file_path.suffix == ".parquet" and data_file_path.exists():
+            print(f"[Process] 直接加载已有的parquet文件: {data_file_path}")
+            dataset = Dataset.from_parquet(str(data_file_path))
+            print(f"[Process] 成功加载 {len(dataset)} 个样本")
+        # 如果目标 parquet 已经存在，也直接加载（例如之前已经从 jsonl 转好）
+        elif parquet_file_path.exists():
+            print(f"[Process] 发现已处理的parquet文件: {parquet_file_path}")
+            print(f"[Process] 直接加载，跳过数据转换...")
+            dataset = Dataset.from_parquet(str(parquet_file_path))
+            print(f"[Process] 成功加载 {len(dataset)} 个样本")
+        else:
+            # 否则视为 jsonl，读取后转换
+            print(f"[Process] 未找到parquet文件，将从 JSONL 转换并保存: {parquet_file_path}")
+
+            file_data = []
+            with open(data_file_path, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f, 1):
+                    try:
+                        file_data.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        print(f"[Line {line_num}] JSON parse failed → Line content: {repr(line)}")
+
+            # 转换为Qwen格式并保存
+            dataset = process_data_for_qwen(
+                file_data,
+                tokenizer_path=args.tokenizer_path,
+                tokenizer=tokenizer,
+                output_file=str(parquet_file_path)
+            )
+            print(f"[Process] 成功转换并保存 {len(dataset)} 个样本到 {parquet_file_path}")
+
+        # 为每个数据集添加文件来源信息，并重新编号索引
+        dataset = dataset.map(
+            lambda example, idx: {**example, "index": idx, "source_file": data_file_path.name},
+            with_indices=True
+        )
+        all_datasets.append(dataset)
+    
+    # 合并所有数据集
+    if len(all_datasets) > 1:
+        print(f"[Process] 合并 {len(all_datasets)} 个数据集...")
+        from datasets import concatenate_datasets
+        dataset = concatenate_datasets(all_datasets)
+        # 重新编号索引（合并后从0开始连续编号）
+        dataset = dataset.map(lambda example, idx: {**example, "index": idx}, with_indices=True)
+        print(f"[Process] 合并后共 {len(dataset)} 个样本")
+    else:
+        dataset = all_datasets[0]
+        # 确保索引从0开始
+        if len(dataset) > 0:
             dataset = dataset.map(lambda example, idx: {**example, "index": idx}, with_indices=True)
-        
-        skip_draft_generation = False
+    
+    # 如果指定了num_samples，只使用前N个样本
+    if args.num_samples and len(dataset) > args.num_samples:
+        print(f"[Dataset] 限制使用前 {args.num_samples} 个样本（总共 {len(dataset)} 个）")
+        dataset = dataset.select(range(args.num_samples))
+        # 重新编号索引
+        dataset = dataset.map(lambda example, idx: {**example, "index": idx}, with_indices=True)
+    
     
     # ========== 3. 加载XCOMET模型 ==========
     print("\n" + "="*60)
     print("步骤3: 加载XCOMET模型")
     print("="*60)
+
     xcomet_loader = None
     if args.load_xcomet:
-        # 确定XCOMET checkpoint路径
+
+        # 1. 找 checkpoint
         if args.xcomet_ckpt:
             xcomet_ckpt = args.xcomet_ckpt
         elif os.getenv("WORD_QE_CKPT"):
             xcomet_ckpt = os.getenv("WORD_QE_CKPT")
         else:
-            # 默认路径
-            default_ckpt = os.path.expanduser("~/models/XCOMET-XL/checkpoints/model.ckpt")
-            if os.path.exists(default_ckpt):
-                xcomet_ckpt = default_ckpt
-            else:
-                print(f"[XCOMET] Warning: XCOMET checkpoint not found at default path: {default_ckpt}")
-                print("[XCOMET] Skipping XCOMET loading. Set --xcomet_ckpt or WORD_QE_CKPT environment variable.")
-                xcomet_ckpt = None
-        
-        if xcomet_ckpt:
-            # 使用统一的XCOMET GPU选择逻辑
-            xcomet_gpu_ids, _ = get_xcomet_gpu_setting(args)
-            
+            default_ckpt = "/ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt"
+            xcomet_ckpt = default_ckpt if os.path.exists(default_ckpt) else None
+
+        if not xcomet_ckpt:
+            print("[XCOMET] No checkpoint found, skipping.")
+        else:
+            # 2. CPU 模式
             if args.xcomet_cpu:
-                print("[XCOMET] 强制使用CPU模式（--xcomet_cpu）")
-            elif args.xcomet_gpus:
-                print(f"[XCOMET] 通过参数指定使用GPU: {xcomet_gpu_ids}")
-            elif xcomet_gpu_ids:
-                print(f"[XCOMET] 使用环境变量CUDA_VISIBLE_DEVICES={xcomet_gpu_ids}")
+                print("[XCOMET] 强制使用 CPU 模式")
+                xcomet_loader = XCOMETLoader(xcomet_ckpt, force_cpu=True, gpu_ids=None)
+
+            # 3. GPU 模式
             else:
-                print("[XCOMET] 默认使用CPU模式")
-            
-            try:
-                xcomet_loader = XCOMETLoader(
-                    xcomet_ckpt, 
-                    force_cpu=args.xcomet_cpu or (xcomet_gpu_ids is None),
-                    gpu_ids=xcomet_gpu_ids
-                )
-                print("[XCOMET] XCOMET model loaded successfully")
-            except Exception as e:
-                print(f"[XCOMET] Failed to load XCOMET: {e}")
-                xcomet_loader = None
+                if not xcomet_logical_gpus:
+                    print("[XCOMET] 未指定 --xcomet_gpus，使用 CPU 以避免误用 GPU")
+                    xcomet_loader = XCOMETLoader(xcomet_ckpt, force_cpu=True, gpu_ids=None)
+                else:
+                    print(f"[XCOMET] 使用逻辑 GPU id: {xcomet_logical_gpus}")
+                    gpu_str = ",".join(str(i) for i in xcomet_logical_gpus)
+                    xcomet_loader = XCOMETLoader(xcomet_ckpt, force_cpu=False, gpu_ids=gpu_str)
+
+            print("[XCOMET] XCOMET model loaded successfully")
     else:
         print("[XCOMET] Skipping XCOMET loading (--load_xcomet=False)")
-    
+        
     # ========== 4. 调用Qwen2.5-7B生成draft翻译 ==========
-    if not skip_draft_generation:
-        print("\n" + "="*60)
-        print("步骤4: 调用Qwen2.5-7B生成draft翻译")
-        print("="*60)
-        
-        print(f"[Qwen] Loading Qwen model from {args.qwen_model_path}...")
-        
-        # 设置Qwen使用的GPU
-        # GPU选择逻辑：
-        # 1. 默认：CPU模式
-        # 2. 如果设置了 --qwen_cpu，强制CPU模式
-        # 3. 如果设置了 --qwen_gpus，使用指定的GPU
-        # 4. 如果只设置了CUDA_VISIBLE_DEVICES（环境变量），且没有分别设置qwen_gpus和xcomet_gpus，则使用CUDA_VISIBLE_DEVICES
-        # 5. 否则，使用CPU
-        original_cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-        
-        import torch
-        if args.qwen_cpu:
-            # 强制CPU模式
-            qwen_gpu_ids = None
-            # 清除CUDA_VISIBLE_DEVICES以确保使用CPU
-            if "CUDA_VISIBLE_DEVICES" in os.environ:
-                del os.environ["CUDA_VISIBLE_DEVICES"]
-            print("[Qwen] 强制使用CPU模式（--qwen_cpu）")
-        elif args.qwen_gpus:
-            # 通过参数指定GPU
-            qwen_gpu_ids = args.qwen_gpus
-            os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-            print(f"[Qwen] 通过参数指定使用GPU: {qwen_gpu_ids}")
-        elif original_cuda_visible and not args.xcomet_gpus:
-            # 如果只设置了CUDA_VISIBLE_DEVICES，且没有分别设置xcomet_gpus，则两者都使用CUDA_VISIBLE_DEVICES
-            qwen_gpu_ids = original_cuda_visible
-            os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-            print(f"[Qwen] 使用环境变量CUDA_VISIBLE_DEVICES={qwen_gpu_ids}")
-        else:
-            # 默认CPU模式
-            qwen_gpu_ids = None
-            if "CUDA_VISIBLE_DEVICES" in os.environ:
-                del os.environ["CUDA_VISIBLE_DEVICES"]
-            print("[Qwen] 默认使用CPU模式")
-        
-        vllm_extra_kwargs = {}
-        if args.use_vllm:
-            if args.vllm_max_num_seqs:
-                vllm_extra_kwargs["max_num_seqs"] = args.vllm_max_num_seqs
-            # 禁用自定义all-reduce避免多PCIe GPU报错
-            vllm_extra_kwargs["disable_custom_all_reduce"] = True
+    print("\n" + "="*60)
+    print("步骤4: 调用Qwen2.5-7B生成draft翻译")
+    print("="*60)
 
-        try:
-            qwen_generator = QwenGenerator(
-                model_path=args.qwen_model_path,
-                use_vllm=args.use_vllm if not args.qwen_cpu else False,  # CPU模式下不使用vLLM
-                device="cpu" if args.qwen_cpu else None,  # CPU模式下明确指定device
-                gpu_memory_utilization=args.gpu_memory_utilization,
-                **vllm_extra_kwargs
-            )
-            print("[Qwen] Qwen model loaded successfully")
-        except Exception as e:
-            print(f"[Qwen] Failed to load Qwen model: {e}")
-            print("[Qwen] Trying to continue with transformers backend...")
-            qwen_generator = QwenGenerator(
-                model_path=args.qwen_model_path,
-                use_vllm=False,
-                device="cpu" if args.qwen_cpu else None,  # CPU模式下明确指定device
-                gpu_memory_utilization=args.gpu_memory_utilization
-            )
+    print(f"[Qwen] Loading Qwen model from {args.qwen_model_path}...")
+
+    # ===== Qwen 的 GPU：必须用物理 GPU id 来设置 CUDA_VISIBLE_DEVICES =====
+    if args.qwen_cpu:
+        if "CUDA_VISIBLE_DEVICES" in os.environ:
+            del os.environ["CUDA_VISIBLE_DEVICES"]
+        print("[Qwen] 强制使用 CPU")
+        qwen_visible_phys = None
+
+    elif args.qwen_gpus:
+        # 用户给的是物理 GPU id
+        qwen_visible_phys = args.qwen_gpus
+        os.environ["CUDA_VISIBLE_DEVICES"] = qwen_visible_phys
+        print(f"[Qwen] 可见物理 GPU: {qwen_visible_phys}")
+
+    else:
+        # 默认为 CPU
+        if "CUDA_VISIBLE_DEVICES" in os.environ:
+            del os.environ["CUDA_VISIBLE_DEVICES"]
+        qwen_visible_phys = None
+        print("[Qwen] 默认使用 CPU（未指定 --qwen_gpus）")
+
+    # ===== vLLM 参数 =====
+    vllm_extra_kwargs = {}
+    if args.use_vllm:
+        if args.vllm_max_num_seqs:
+            vllm_extra_kwargs["max_num_seqs"] = args.vllm_max_num_seqs
+        vllm_extra_kwargs["disable_custom_all_reduce"] = True
+
+    # ===== 启动 Qwen =====
+    try:
+        qwen_generator = QwenGenerator(
+            model_path=args.qwen_model_path,
+            use_vllm=args.use_vllm and not args.qwen_cpu,
+            device="cpu" if args.qwen_cpu else None,
+            gpu_memory_utilization=args.gpu_memory_utilization,
+            **vllm_extra_kwargs
+        )
+        print("[Qwen] Qwen model loaded successfully")
+
+    except Exception as e:
+        print(f"[Qwen] Failed to load Qwen model: {e}")
+        qwen_generator = QwenGenerator(
+            model_path=args.qwen_model_path,
+            use_vllm=False,
+            device="cpu",
+        )
         
-        # ========== 阶段式处理：先完成所有阶段的所有数据，再进入下一阶段 ==========
-        dataset_df = dataset.to_pandas()
-        num_samples = len(dataset_df)
-        print(f"\n[Stage] 开始阶段式处理，共 {num_samples} 个样本")
+    # ========== 阶段式处理：先完成所有阶段的所有数据，再进入下一阶段 ==========
+    dataset_df = dataset.to_pandas()
+    num_samples = len(dataset_df)
+    print(f"\n[Stage] 开始阶段式处理，共 {num_samples} 个样本")
+    
+    # 初始化所有结果
+    results = []
+    for _, row in dataset_df.iterrows():
+        results.append({
+            "index": int(row['index']),
+            "data_source": row['data_source'],
+            "lang_pair": row['lang_pair'],
+            "src_text": row['src_text'],
+            "tgt_text": row['tgt_text'],
+            "draft_prompt": row['prompt'],
+        })
         
-        # 初始化所有结果
-        results = []
-        for _, row in dataset_df.iterrows():
-            results.append({
-                "index": int(row['index']),
-                "data_source": row['data_source'],
-                "lang_pair": row['lang_pair'],
-                "src_text": row['src_text'],
-                "tgt_text": row['tgt_text'],
-                "draft_prompt": row['prompt'],
-            })
-        
-        if extended_mode:
-            # ========== 扩展模式流程 ==========
-            
-            # ========== 阶段1：批量生成完整原文的初稿翻译 ==========
-            print("\n" + "="*60)
-            print("阶段1: 批量生成完整原文的初稿翻译")
-            print("="*60)
-            
-            # 收集所有完整原文的prompt
-            draft_prompts: List[str] = []
-            for idx in range(num_samples):
-                draft_example = {
-                    'lg': results[idx]['lang_pair'],
-                    'src_text': results[idx]['src_text'],  # 完整原文
-                }
-                draft_prompt = make_prefix(
-                    draft_example,
-                    template_type='draft',
-                    tokenizer=tokenizer
+    if extended_mode:
+        # ========== 扩展模式流程 ==========
+
+        # ========== 阶段1：批量生成完整原文的初稿翻译 ==========
+        print("\n" + "="*60)
+        print("阶段1: 批量生成完整原文的初稿翻译")
+        print("="*60)
+
+        # 收集所有完整原文的prompt
+        draft_prompts: List[str] = [r["draft_prompt"] for r in results]
+
+        # 批量生成所有完整原文的初稿
+        all_draft_generated_texts: List[str] = []
+        for i in tqdm(range(0, len(draft_prompts), args.batch_size), desc="生成完整初稿"):
+            batch_prompts = draft_prompts[i:i + args.batch_size]
+            try:
+                generated_texts = qwen_generator.generate_draft(
+                    batch_prompts,
+                    mode="draft",
+                    max_tokens=args.max_tokens,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
                 )
-                draft_prompts.append(draft_prompt)
-            
-            # 批量生成所有完整原文的初稿
-            all_draft_generated_texts: List[str] = []
-            for i in tqdm(range(0, len(draft_prompts), args.batch_size), desc="生成完整初稿"):
-                batch_prompts = draft_prompts[i:i + args.batch_size]
-                try:
-                    generated_texts = qwen_generator.generate_draft(
-                        batch_prompts,
-                        mode="draft",
-                        max_tokens=args.max_tokens,
-                        temperature=args.temperature,
-                        top_p=args.top_p
+                if isinstance(generated_texts, str):
+                    generated_texts = [generated_texts]
+                if len(generated_texts) != len(batch_prompts):
+                    print(
+                        f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch_prompts)})不匹配"
                     )
-                    if isinstance(generated_texts, str):
-                        generated_texts = [generated_texts]
-                    if len(generated_texts) != len(batch_prompts):
-                        print(f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch_prompts)})不匹配")
-                        generated_texts = list(generated_texts) + [""] * (len(batch_prompts) - len(generated_texts))
-                except Exception as e:
-                    print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    generated_texts = [""] * len(batch_prompts)
-                
-                all_draft_generated_texts.extend(generated_texts)
-            
-            # 保存每个样本的完整初稿生成结果
+                    generated_texts = list(generated_texts) + [""] * (
+                        len(batch_prompts) - len(generated_texts)
+                    )
+            except Exception as e:
+                print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
+                import traceback
+
+                traceback.print_exc()
+                generated_texts = [""] * len(batch_prompts)
+
+            all_draft_generated_texts.extend(generated_texts)
+
+        # 保存每个样本的完整初稿生成结果
+        for idx in range(num_samples):
+            if idx < len(all_draft_generated_texts):
+                results[idx]["draft_generated_text"] = all_draft_generated_texts[idx]
+            else:
+                results[idx]["draft_generated_text"] = ""
+
+        # ========== 阶段2：对所有初稿进行格式检查，提取<translate>标签中的内容 ==========
+        print("\n" + "="*60)
+        print("阶段2: 对所有初稿进行格式检查，提取<translate>标签中的内容")
+        print("="*60)
+
+        for idx in tqdm(range(num_samples), desc="检查初稿格式"):
+            draft_text = results[idx].get("draft_generated_text", "")
+            format_valid, draft_translation, format_score = check_and_extract_translate_tag(
+                draft_text
+            )
+            results[idx]["draft_format_score"] = format_score
+            results[idx]["draft_translation"] = draft_translation if format_valid else None
+
+        # ========== 阶段3：把完整的初稿翻译切分为初稿短句 ==========
+        print("\n" + "="*60)
+        print("阶段3: 把完整的初稿翻译切分为初稿短句")
+        print("="*60)
+
+        for idx in tqdm(range(num_samples), desc="切分初稿翻译"):
+            draft_translation = results[idx].get("draft_translation")
+            if draft_translation:
+                draft_segments = split_into_segments(draft_translation)
+                if not draft_segments and draft_translation:
+                    draft_segments = [draft_translation.strip()]
+            else:
+                draft_segments = []
+
+            results[idx]["draft_segments"] = draft_segments
+            results[idx]["draft_segment_results"] = [
+                {"score": None, "error_spans": []} for _ in draft_segments
+            ]
+
+        # ========== 阶段4：对所有初稿短句进行XCOMET评分 ==========
+        print("\n" + "="*60)
+        print("阶段4: 对所有初稿短句进行XCOMET评分")
+        print("="*60)
+
+        if xcomet_loader:
+            # 构建三元组：完整原文、初稿短句、完整参考翻译
+            draft_segment_triplets = []
+            draft_segment_mapping = []
             for idx in range(num_samples):
-                if idx < len(all_draft_generated_texts):
-                    results[idx]['draft_generated_text'] = all_draft_generated_texts[idx]
-                else:
-                    results[idx]['draft_generated_text'] = ""
-            
-            # ========== 阶段2：对所有初稿进行格式检查，提取<translate>标签中的内容 ==========
-            print("\n" + "="*60)
-            print("阶段2: 对所有初稿进行格式检查，提取<translate>标签中的内容")
-            print("="*60)
-            
-            for idx in tqdm(range(num_samples), desc="检查初稿格式"):
-                draft_text = results[idx].get('draft_generated_text', '')
-                format_valid, draft_translation, format_score = check_and_extract_translate_tag(draft_text)
-                results[idx]['draft_format_score'] = format_score
-                results[idx]['draft_translation'] = draft_translation if format_valid else None
-            
-            # ========== 阶段3：把完整的初稿翻译切分为初稿短句 ==========
-            print("\n" + "="*60)
-            print("阶段3: 把完整的初稿翻译切分为初稿短句")
-            print("="*60)
-            
-            for idx in tqdm(range(num_samples), desc="切分初稿翻译"):
-                draft_translation = results[idx].get('draft_translation')
-                if draft_translation:
-                    draft_segments = split_into_segments(draft_translation)
-                    if not draft_segments and draft_translation:
-                        draft_segments = [draft_translation.strip()]
-                else:
-                    draft_segments = []
-                
-                results[idx]['draft_segments'] = draft_segments
-                results[idx]['draft_segment_results'] = [
-                    {"score": None, "error_spans": []} for _ in draft_segments
-                ]
-            
-            # ========== 阶段4：对所有初稿短句进行XCOMET评分 ==========
-            print("\n" + "="*60)
-            print("阶段4: 对所有初稿短句进行XCOMET评分")
-            print("="*60)
-            
-            if xcomet_loader:
-                # 使用统一的XCOMET GPU选择逻辑
-                xcomet_gpu_ids, should_set_env = get_xcomet_gpu_setting(args)
-                
-                if args.xcomet_cpu:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 强制使用CPU模式（--xcomet_cpu）")
-                elif args.xcomet_gpus:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 通过参数指定使用GPU: {xcomet_gpu_ids}")
-                elif xcomet_gpu_ids and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 使用环境变量CUDA_VISIBLE_DEVICES={xcomet_gpu_ids}")
-                else:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 默认使用CPU模式")
-                
-                # 构建三元组：完整原文、初稿短句、完整参考翻译
-                draft_segment_triplets = []
-                draft_segment_mapping = []
-                for idx in range(num_samples):
-                    src_text = results[idx]['src_text']  # 完整原文
-                    ref_text = results[idx]['tgt_text']  # 完整参考翻译
-                    draft_segments = results[idx].get('draft_segments', [])
-                    
-                    for seg_idx, draft_seg in enumerate(draft_segments):
-                        if draft_seg:
-                            draft_segment_triplets.append({
+                src_text = results[idx]["src_text"]  # 完整原文
+                ref_text = results[idx]["tgt_text"]  # 完整参考翻译
+                draft_segments = results[idx].get("draft_segments", [])
+
+                for seg_idx, draft_seg in enumerate(draft_segments):
+                    if draft_seg:
+                        draft_segment_triplets.append(
+                            {
                                 "src": str(src_text).strip(),
                                 "mt": str(draft_seg).strip(),
-                                "ref": str(ref_text).strip()
-                            })
-                            draft_segment_mapping.append((idx, seg_idx))
-                
-                if draft_segment_triplets:
-                    try:
-                        print(f"[XCOMET] 批量评分 {len(draft_segment_triplets)} 个初稿短句（使用完整原文和完整参考翻译）...")
-                        segment_results = xcomet_loader.predict(
-                            draft_segment_triplets,
-                            batch_size=args.xcomet_batch_size,
-                            return_system_score=True
+                                "ref": str(ref_text).strip(),
+                            }
                         )
-                        for result_idx, (sample_idx, seg_idx) in enumerate(draft_segment_mapping):
-                            if result_idx < len(segment_results):
-                                results[sample_idx]['draft_segment_results'][seg_idx] = segment_results[result_idx]
-                            else:
-                                results[sample_idx]['draft_segment_results'][seg_idx] = {
+                        draft_segment_mapping.append((idx, seg_idx))
+
+            if draft_segment_triplets:
+                try:
+                    print(
+                        f"[XCOMET] 批量评分 {len(draft_segment_triplets)} 个初稿短句（使用完整原文和完整参考翻译）..."
+                    )
+                    segment_results = xcomet_loader.predict(
+                        draft_segment_triplets,
+                        batch_size=args.xcomet_batch_size,
+                        return_system_score=True,
+                    )
+                    for result_idx, (sample_idx, seg_idx) in enumerate(draft_segment_mapping):
+                        if result_idx < len(segment_results):
+                            results[sample_idx]["draft_segment_results"][seg_idx] = segment_results[
+                                result_idx
+                            ]
+                        else:
+                            results[sample_idx]["draft_segment_results"][seg_idx] = {
+                                "score": None,
+                                "error_spans": [],
+                                "error": "XCOMET result index out of range",
+                            }
+                except Exception as e:
+                    error_count = getattr(xcomet_loader, "_error_count", 0)
+                    xcomet_loader._error_count = error_count + 1
+                    if error_count < 3:
+                        print(f"[Warning] 批量XCOMET评分失败: {str(e)[:100]}")
+                    elif error_count == 3:
+                        print("[Warning] XCOMET错误过多，后续错误将静默处理...")
+                    for sample_idx, seg_idx in draft_segment_mapping:
+                        if seg_idx < len(results[sample_idx].get("draft_segment_results", [])):
+                            if not results[sample_idx]["draft_segment_results"][seg_idx]:
+                                results[sample_idx]["draft_segment_results"][seg_idx] = {
                                     "score": None,
                                     "error_spans": [],
-                                    "error": "XCOMET result index out of range",
+                                    "error": str(e)[:200]
+                                    if error_count < 3
+                                    else "Multiple errors (suppressed)",
                                 }
-                    except Exception as e:
-                        error_count = xcomet_loader._error_count
-                        xcomet_loader._error_count = error_count + 1
-                        if error_count < 3:
-                            print(f"[Warning] 批量XCOMET评分失败: {str(e)[:100]}")
-                        elif error_count == 3:
-                            print(f"[Warning] XCOMET错误过多，后续错误将静默处理...")
-                        for sample_idx, seg_idx in draft_segment_mapping:
-                            if seg_idx < len(results[sample_idx].get('draft_segment_results', [])):
-                                if not results[sample_idx]['draft_segment_results'][seg_idx]:
-                                    results[sample_idx]['draft_segment_results'][seg_idx] = {
-                                        "score": None,
-                                        "error_spans": [],
-                                        "error": str(e)[:200] if error_count < 3 else "Multiple errors (suppressed)",
-                                    }
-                else:
-                    print("[XCOMET] 没有需要评分的初稿短句")
-                
-                # 汇总所有短句的评分
-                for idx in range(num_samples):
-                    segment_results = results[idx].get('draft_segment_results', [])
-                    if not segment_results:
-                        continue
-                    scores = [seg_res.get('score') for seg_res in segment_results if isinstance(seg_res, dict) and seg_res.get('score') is not None]
-                    combined_spans = []
-                    for seg_res in segment_results:
-                        if isinstance(seg_res, dict) and seg_res.get('error_spans'):
-                            combined_spans.extend(seg_res['error_spans'])
-                    results[idx]['xcomet_draft'] = {
-                        "score": (sum(scores) / len(scores)) if scores else None,
-                        "error_spans": combined_spans,
-                    }
-                
-                if torch.cuda.is_available() and qwen_gpu_ids:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-                    print(f"[Stage] 恢复Qwen的CUDA_VISIBLE_DEVICES={qwen_gpu_ids}")
-            
-            # ========== 阶段5：批量生成所有初稿短句的润色短句 ==========
-            print("\n" + "="*60)
-            print("阶段5: 批量生成所有初稿短句的润色短句")
-            print("="*60)
-            
-            repair_prompts: List[str] = []
-            repair_mapping: List[tuple] = []  # (sample_idx, segment_idx)
-            
+            else:
+                print("[XCOMET] 没有需要评分的初稿短句")
+
+            # 汇总所有短句的评分
             for idx in range(num_samples):
-                src_text = results[idx]['src_text']  # 完整原文
-                ref_text = results[idx]['tgt_text']  # 完整参考翻译
-                draft_segments = results[idx].get('draft_segments', [])
-                segment_results = results[idx].get('draft_segment_results', [])
-                
-                results[idx]['repair_segment_outputs'] = [None] * len(draft_segments)
-                results[idx]['final_segments'] = [None] * len(draft_segments)
-                results[idx]['repair_segment_prompts'] = [None] * len(draft_segments)
-                results[idx]['repair_segment_format_scores'] = [0] * len(draft_segments)
-                
-                for seg_idx, draft_seg in enumerate(draft_segments):
-                    if not draft_seg:
-                        # 如果没有初稿短句，跳过
-                        continue
-                    
-                    segment_errors = []
-                    if seg_idx < len(segment_results) and isinstance(segment_results[seg_idx], dict):
-                        segment_errors = segment_results[seg_idx].get('error_spans', []) or []
-                    
-                    # 生成repair prompt：包含完整原文、初稿短句、完整参考翻译、错误片段
+                segment_results = results[idx].get("draft_segment_results", [])
+                if not segment_results:
+                    continue
+                scores = [
+                    seg_res.get("score")
+                    for seg_res in segment_results
+                    if isinstance(seg_res, dict) and seg_res.get("score") is not None
+                ]
+                combined_spans = []
+                for seg_res in segment_results:
+                    if isinstance(seg_res, dict) and seg_res.get("error_spans"):
+                        combined_spans.extend(seg_res["error_spans"])
+                results[idx]["xcomet_draft"] = {
+                    "score": (sum(scores) / len(scores)) if scores else None,
+                    "error_spans": combined_spans,
+                }
+        else:
+            print("[XCOMET] 未加载，跳过初稿短句评分")
+
+        # ========== 阶段5：批量生成所有初稿短句的润色短句 ==========
+        print("\n" + "="*60)
+        print("阶段5: 批量生成所有初稿短句的润色短句")
+        print("="*60)
+
+        repair_prompts: List[str] = []
+        repair_mapping: List[tuple] = []  # (sample_idx, segment_idx)
+
+        for idx in range(num_samples):
+            src_text = results[idx]["src_text"]  # 完整原文
+            draft_segments = results[idx].get("draft_segments", [])
+            segment_results = results[idx].get("draft_segment_results", [])
+
+            results[idx]["repair_segment_outputs"] = [None] * len(draft_segments)
+            results[idx]["final_segments"] = [None] * len(draft_segments)
+            results[idx]["repair_segment_prompts"] = [None] * len(draft_segments)
+            results[idx]["repair_segment_format_scores"] = [0] * len(draft_segments)
+
+            for seg_idx, draft_seg in enumerate(draft_segments):
+                if not draft_seg:
+                    continue
+
+                segment_errors = []
+                if seg_idx < len(segment_results) and isinstance(segment_results[seg_idx], dict):
+                    segment_errors = segment_results[seg_idx].get("error_spans", []) or []
+
+                if segment_errors == []:
+                    # 没有错误片段，跳过润色
+                    continue
+
+                # 生成repair prompt：包含完整原文、初稿短句、错误片段
+                repair_example = {
+                    "lg": results[idx]["lang_pair"],
+                    "src_text": src_text,
+                }
+                repair_prompt = make_prefix(
+                    repair_example,
+                    template_type="repair",
+                    tokenizer=tokenizer,
+                    st_mode="extended",
+                    error_spans=segment_errors,
+                    draft_translation=draft_seg,
+                )
+                repair_prompts.append(repair_prompt)
+                repair_mapping.append((idx, seg_idx))
+                results[idx]["repair_segment_prompts"][seg_idx] = repair_prompt
+
+        if repair_prompts:
+            all_repair_generated_texts: List[str] = []
+            for i in tqdm(range(0, len(repair_prompts), args.batch_size), desc="生成润色短句"):
+                batch_prompts = repair_prompts[i : i + args.batch_size]
+                try:
+                    repair_texts = qwen_generator.generate_draft(
+                        batch_prompts,
+                        mode="repair",
+                        max_tokens=args.max_tokens,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
+                    )
+                    if isinstance(repair_texts, str):
+                        repair_texts = [repair_texts]
+                    if len(repair_texts) != len(batch_prompts):
+                        print(
+                            f"[Warning] Repair生成文本数量({len(repair_texts)})与批次大小({len(batch_prompts)})不匹配"
+                        )
+                        repair_texts = list(repair_texts) + [""] * (
+                            len(batch_prompts) - len(repair_texts)
+                        )
+                except Exception as e:
+                    print(
+                        f"\n[Error] Repair generation failed for batch starting at index {i}: {e}"
+                    )
+                    import traceback
+
+                    traceback.print_exc()
+                    repair_texts = [""] * len(batch_prompts)
+
+                all_repair_generated_texts.extend(repair_texts)
+
+            # 提取润色短句的translate
+            for prompt_idx, (sample_idx, segment_idx) in enumerate(repair_mapping):
+                if prompt_idx >= len(all_repair_generated_texts):
+                    continue
+                repair_text = all_repair_generated_texts[prompt_idx]
+                results[sample_idx]["repair_segment_outputs"][segment_idx] = repair_text
+                valid, final_text, format_score = check_and_extract_translate_tag(repair_text)
+                if valid and final_text:
+                    results[sample_idx]["final_segments"][segment_idx] = final_text
+                    results[sample_idx]["repair_segment_format_scores"][segment_idx] = format_score
+                else:
+                    # 回退到初稿短句
+                    draft_seg = (
+                        results[sample_idx]["draft_segments"][segment_idx]
+                        if segment_idx < len(results[sample_idx]["draft_segments"])
+                        else None
+                    )
+                    results[sample_idx]["final_segments"][segment_idx] = draft_seg
+                    results[sample_idx]["repair_segment_format_scores"][segment_idx] = 0
+
+        # ========== 阶段6：汇总终稿短句 ==========
+        print("\n" + "="*60)
+        print("阶段6: 汇总终稿短句")
+        print("="*60)
+
+        for idx in range(num_samples):
+            draft_segments = results[idx].get("draft_segments", [])
+            final_segments = results[idx].get("final_segments") or []
+
+            # 确保所有短句都有最终结果
+            for seg_idx in range(len(draft_segments)):
+                if not final_segments[seg_idx]:
+                    draft_seg = (
+                        draft_segments[seg_idx] if seg_idx < len(draft_segments) else None
+                    )
+                    if draft_seg:
+                        final_segments[seg_idx] = draft_seg
+
+            has_all_drafts = all(
+                draft_segments[seg_idx] for seg_idx in range(len(draft_segments))
+            )
+
+            if has_all_drafts and final_segments:
+                combined_translation = " ".join(
+                    seg.strip() for seg in final_segments if seg and seg.strip()
+                )
+                results[idx]["final_translation"] = (
+                    combined_translation if combined_translation else None
+                )
+            else:
+                results[idx]["final_translation"] = None
+
+            segment_format_scores = results[idx].get("repair_segment_format_scores", [])
+            if segment_format_scores:
+                results[idx]["repair_format_score"] = (
+                    1 if all(score == 1 for score in segment_format_scores) else 0
+                )
+            else:
+                results[idx]["repair_format_score"] = 0
+
+            if results[idx].get("repair_segment_outputs"):
+                results[idx]["repair_generated_text"] = " ".join(
+                    filter(None, results[idx]["repair_segment_outputs"])
+                )
+            else:
+                results[idx]["repair_generated_text"] = None
+
+        # ========== 阶段7：对所有终稿翻译进行XCOMET评分 ==========
+        print("\n" + "="*60)
+        print("阶段7: 对所有终稿翻译进行XCOMET评分")
+        print("="*60)
+
+        if xcomet_loader:
+            final_xcomet_triplets = []
+            final_xcomet_indices = []
+            for idx in range(num_samples):
+                final_translation = results[idx].get("final_translation")
+                if final_translation:
+                    src_text = (
+                        str(results[idx]["src_text"]).strip()
+                        if results[idx]["src_text"]
+                        else ""
+                    )
+                    ref_text = (
+                        str(results[idx]["tgt_text"]).strip()
+                        if results[idx]["tgt_text"]
+                        else ""
+                    )
+                    if src_text and ref_text:
+                        final_xcomet_triplets.append(
+                            {"src": src_text, "mt": final_translation, "ref": ref_text}
+                        )
+                        final_xcomet_indices.append(idx)
+
+            if final_xcomet_triplets:
+                try:
+                    print(
+                        f"[XCOMET] 批量评分 {len(final_xcomet_triplets)} 个终稿翻译..."
+                    )
+                    xcomet_final_results = xcomet_loader.predict(
+                        final_xcomet_triplets,
+                        batch_size=args.xcomet_batch_size,
+                        return_system_score=True,
+                    )
+                    for result_idx, final_idx in enumerate(final_xcomet_indices):
+                        if result_idx < len(xcomet_final_results):
+                            xcomet_analysis_final = xcomet_final_results[result_idx]
+                            results[final_idx]["xcomet_final"] = xcomet_analysis_final
+                        else:
+                            results[final_idx]["xcomet_final"] = {
+                                "score": None,
+                                "error_spans": [],
+                                "error": "XCOMET final result index out of range",
+                            }
+                except Exception as e:
+                    error_count = getattr(xcomet_loader, "_error_count", 0)
+                    xcomet_loader._error_count = error_count + 1
+                    if error_count < 3:
+                        print(f"[Warning] 批量XCOMET终稿评分失败: {str(e)[:100]}")
+                    elif error_count == 3:
+                        print("[Warning] XCOMET错误过多，后续错误将静默处理...")
+                    for final_idx in final_xcomet_indices:
+                        if "xcomet_final" not in results[final_idx]:
+                            results[final_idx]["xcomet_final"] = {
+                                "score": None,
+                                "error_spans": [],
+                                "error": str(e)[:200]
+                                if error_count < 3
+                                else "Multiple errors (suppressed)",
+                            }
+            else:
+                print("[XCOMET] 没有需要评分的终稿翻译")
+        else:
+            print("[XCOMET] 未加载，跳过终稿评分")
+    
+    else:
+        # ========== 基线模式流程 ==========
+
+        # ========== 阶段1：批量生成所有数据的初稿 ==========
+        print("\n" + "="*60)
+        print("阶段1: 批量生成所有数据的初稿")
+        print("="*60)
+
+        all_draft_generated_texts = []
+        for i in tqdm(range(0, num_samples, args.batch_size), desc="生成初稿"):
+            batch = dataset_df.iloc[i:i + args.batch_size]
+            prompts = batch["prompt"].tolist()
+
+            try:
+                generated_texts = qwen_generator.generate_draft(
+                    prompts,
+                    mode="draft",
+                    max_tokens=args.max_tokens,
+                    temperature=args.temperature,
+                    top_p=args.top_p,
+                )
+                if isinstance(generated_texts, str):
+                    generated_texts = [generated_texts]
+                if len(generated_texts) != len(batch):
+                    print(
+                        f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch)})不匹配，使用空字符串填充"
+                    )
+                    generated_texts = list(generated_texts) + [""] * (
+                        len(batch) - len(generated_texts)
+                    )
+            except Exception as e:
+                print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
+                import traceback
+
+                traceback.print_exc()
+                generated_texts = [""] * len(batch)
+
+            all_draft_generated_texts.extend(generated_texts)
+
+        # 保存初稿生成结果
+        for idx, draft_text in enumerate(all_draft_generated_texts):
+            results[idx]["draft_generated_text"] = draft_text
+
+        # ========== 阶段2：对所有初稿进行格式检查 ==========
+        print("\n" + "="*60)
+        print("阶段2: 对所有初稿进行格式检查")
+        print("="*60)
+
+        for idx in tqdm(range(num_samples), desc="检查初稿格式"):
+            draft_text = results[idx]["draft_generated_text"]
+            format_valid, draft_translation, format_score = check_and_extract_translate_tag(
+                draft_text
+            )
+            results[idx]["draft_format_score"] = format_score
+            results[idx]["draft_translation"] = draft_translation if format_valid else None
+
+        # ========== 阶段3：对所有初稿翻译进行XCOMET评分 ==========
+        print("\n" + "="*60)
+        print("阶段3: 对所有初稿翻译进行XCOMET评分")
+        print("="*60)
+
+        if xcomet_loader:
+            draft_xcomet_triplets = []
+            draft_xcomet_indices = []
+            for idx in range(num_samples):
+                format_valid = results[idx].get("draft_format_score", 0) == 1
+                draft_translation = results[idx].get("draft_translation")
+                if format_valid and draft_translation:
+                    src_text = (
+                        str(results[idx]["src_text"]).strip()
+                        if results[idx]["src_text"]
+                        else ""
+                    )
+                    ref_text = (
+                        str(results[idx]["tgt_text"]).strip()
+                        if results[idx]["tgt_text"]
+                        else ""
+                    )
+                    if src_text and ref_text:
+                        draft_xcomet_triplets.append(
+                            {"src": src_text, "mt": draft_translation, "ref": ref_text}
+                        )
+                        draft_xcomet_indices.append(idx)
+
+            if draft_xcomet_triplets:
+                try:
+                    print(
+                        f"[XCOMET] 批量评分 {len(draft_xcomet_triplets)} 个初稿翻译..."
+                    )
+                    xcomet_results = xcomet_loader.predict(
+                        draft_xcomet_triplets,
+                        batch_size=args.xcomet_batch_size,
+                        return_system_score=True,
+                    )
+                    for result_idx, xcomet_idx in enumerate(draft_xcomet_indices):
+                        if result_idx < len(xcomet_results):
+                            xcomet_analysis = xcomet_results[result_idx]
+                            results[xcomet_idx]["xcomet_draft"] = xcomet_analysis
+                        else:
+                            results[xcomet_idx]["xcomet_draft"] = {
+                                "score": None,
+                                "error_spans": [],
+                                "error": "XCOMET result index out of range",
+                            }
+                except Exception as e:
+                    error_count = getattr(xcomet_loader, "_error_count", 0)
+                    xcomet_loader._error_count = error_count + 1
+                    if error_count < 3:
+                        print(f"[Warning] 批量XCOMET评分失败: {str(e)[:100]}")
+                    elif error_count == 3:
+                        print("[Warning] XCOMET错误过多，后续错误将静默处理...")
+                    for xcomet_idx in draft_xcomet_indices:
+                        if "xcomet_draft" not in results[xcomet_idx]:
+                            results[xcomet_idx]["xcomet_draft"] = {
+                                "score": None,
+                                "error_spans": [],
+                                "error": str(e)[:200]
+                                if error_count < 3
+                                else "Multiple errors (suppressed)",
+                            }
+            else:
+                print("[XCOMET] 没有需要评分的初稿翻译")
+
+            # 对于没有 xcomet_draft 的样本做兜底说明
+            for idx in range(num_samples):
+                if "xcomet_draft" not in results[idx]:
+                    format_valid = results[idx].get("draft_format_score", 0) == 1
+                    draft_translation = results[idx].get("draft_translation")
+                    if not format_valid or not draft_translation:
+                        results[idx]["xcomet_draft"] = {
+                            "score": None,
+                            "error_spans": [],
+                            "error": "Draft format invalid or translation is empty"
+                            if not format_valid
+                            else "Draft translation is empty",
+                        }
+                    else:
+                        results[idx]["xcomet_draft"] = {
+                            "score": None,
+                            "error_spans": [],
+                            "error": "XCOMET loader not available",
+                        }
+        else:
+            print("[XCOMET] 未加载，跳过初稿评分")
+            # 统一给一个说明
+            for idx in range(num_samples):
+                if "xcomet_draft" not in results[idx]:
+                    results[idx]["xcomet_draft"] = {
+                        "score": None,
+                        "error_spans": [],
+                        "error": "XCOMET loader not available",
+                    }
+
+        # ========== 阶段4：批量生成所有数据的终稿（repair） ==========
+        print("\n" + "="*60)
+        print("阶段4: 批量生成所有数据的终稿（repair）")
+        print("="*60)
+
+        # 收集需要repair的样本
+        repair_prompts = []
+        repair_indices = []
+
+        for idx in range(num_samples):
+            format_valid = results[idx].get("draft_format_score", 0) == 1
+            draft_translation = results[idx].get("draft_translation")
+            xcomet_draft = results[idx].get("xcomet_draft", {})
+            error_spans = (
+                xcomet_draft.get("error_spans", [])
+                if isinstance(xcomet_draft, dict)
+                else []
+            )
+
+            results[idx]["repair_generated_text"] = None
+            results[idx]["repair_prompt"] = None
+            results[idx]["repair_format_score"] = 0
+            results[idx]["final_translation"] = None
+
+            # 情况1：如果没有初稿，跳过refinement
+            if not draft_translation:
+                continue
+
+            # 情况2：有初稿但无错误，跳过refinement，直接使用初稿
+            elif format_valid and draft_translation and (not error_spans or len(error_spans) == 0):
+                results[idx]["final_translation"] = draft_translation
+
+            # 情况3：有初稿且有错误，需要repair
+            elif format_valid and draft_translation and error_spans:
+                try:
                     repair_example = {
-                        'lg': results[idx]['lang_pair'],
-                        'src_text': src_text,  # 完整原文
+                        "lg": results[idx]["lang_pair"],
+                        "src_text": results[idx]["src_text"],
                     }
                     repair_prompt = make_prefix(
                         repair_example,
-                        template_type='repair',
+                        template_type="repair",
+                        st_mode="baseline",
                         tokenizer=tokenizer,
-                        error_spans=segment_errors,
-                        draft_translation=draft_seg,  # 初稿短句
-                        ref_text=ref_text  # 完整参考翻译
+                        error_spans=error_spans,
+                        draft_translation=draft_translation,
                     )
                     repair_prompts.append(repair_prompt)
-                    repair_mapping.append((idx, seg_idx))
-                    results[idx]['repair_segment_prompts'][seg_idx] = repair_prompt
-            
-            if repair_prompts:
-                all_repair_generated_texts: List[str] = []
-                for i in tqdm(range(0, len(repair_prompts), args.batch_size), desc="生成润色短句"):
-                    batch_prompts = repair_prompts[i:i + args.batch_size]
-                    try:
-                        repair_texts = qwen_generator.generate_draft(
-                            batch_prompts,
-                            mode="repair",
-                            max_tokens=args.max_tokens,
-                            temperature=args.temperature,
-                            top_p=args.top_p
-                        )
-                        if isinstance(repair_texts, str):
-                            repair_texts = [repair_texts]
-                        if len(repair_texts) != len(batch_prompts):
-                            print(f"[Warning] Repair生成文本数量({len(repair_texts)})与批次大小({len(batch_prompts)})不匹配")
-                            repair_texts = list(repair_texts) + [""] * (len(batch_prompts) - len(repair_texts))
-                    except Exception as e:
-                        print(f"\n[Error] Repair generation failed for batch starting at index {i}: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        repair_texts = [""] * len(batch_prompts)
-                    
-                    all_repair_generated_texts.extend(repair_texts)
-                
-                # 提取润色短句的translate
-                for prompt_idx, (sample_idx, segment_idx) in enumerate(repair_mapping):
-                    if prompt_idx >= len(all_repair_generated_texts):
-                        continue
-                    repair_text = all_repair_generated_texts[prompt_idx]
-                    results[sample_idx]['repair_segment_outputs'][segment_idx] = repair_text
-                    valid, final_text, format_score = check_and_extract_translate_tag(repair_text)
-                    if valid and final_text:
-                        results[sample_idx]['final_segments'][segment_idx] = final_text
-                        results[sample_idx]['repair_segment_format_scores'][segment_idx] = format_score
-                    else:
-                        # 回退到初稿短句
-                        draft_seg = results[sample_idx]['draft_segments'][segment_idx] if segment_idx < len(results[sample_idx]['draft_segments']) else None
-                        results[sample_idx]['final_segments'][segment_idx] = draft_seg
-                        results[sample_idx]['repair_segment_format_scores'][segment_idx] = 0
-            
-            # ========== 阶段6：汇总终稿短句 ==========
-            print("\n" + "="*60)
-            print("阶段6: 汇总终稿短句")
-            print("="*60)
-            
-            for idx in range(num_samples):
-                draft_segments = results[idx].get('draft_segments', [])
-                final_segments = results[idx].get('final_segments') or []
-                
-                # 确保所有短句都有最终结果
-                for seg_idx in range(len(draft_segments)):
-                    if seg_idx >= len(final_segments) or not final_segments[seg_idx]:
-                        # 如果没有润色短句，使用初稿短句
-                        draft_seg = draft_segments[seg_idx] if seg_idx < len(draft_segments) else None
-                        if draft_seg:
-                            if seg_idx >= len(final_segments):
-                                final_segments.extend([None] * (seg_idx - len(final_segments) + 1))
-                            final_segments[seg_idx] = draft_seg
-                
-                # 检查是否有缺失的初稿短句
-                has_all_drafts = all(
-                    seg_idx < len(draft_segments) and draft_segments[seg_idx] 
-                    for seg_idx in range(len(draft_segments))
-                )
-                
-                if has_all_drafts and final_segments:
-                    # 合并所有短句为终稿
-                    combined_translation = ' '.join(
-                        seg.strip() for seg in final_segments if seg and seg.strip()
+                    repair_indices.append(idx)
+                    results[idx]["repair_prompt"] = repair_prompt
+                except Exception as e:
+                    print(
+                        f"[Warning] 构建repair prompt失败 for sample {results[idx]['index']}: {str(e)[:100]}"
                     )
-                    results[idx]['final_translation'] = combined_translation if combined_translation else None
-                else:
-                    # 如果有初稿短句不存在的情况，则没有终稿
-                    results[idx]['final_translation'] = None
-                
-                # 计算repair格式得分
-                segment_format_scores = results[idx].get('repair_segment_format_scores', [])
-                if segment_format_scores:
-                    results[idx]['repair_format_score'] = 1 if all(score == 1 for score in segment_format_scores) else 0
-                else:
-                    results[idx]['repair_format_score'] = 0
-                
-                if results[idx].get('repair_segment_outputs'):
-                    results[idx]['repair_generated_text'] = ' '.join(filter(None, results[idx]['repair_segment_outputs']))
-                else:
-                    results[idx]['repair_generated_text'] = None
-            
-            # ========== 阶段7：对所有终稿翻译进行XCOMET评分 ==========
-            print("\n" + "="*60)
-            print("阶段7: 对所有终稿翻译进行XCOMET评分")
-            print("="*60)
-            
-            if xcomet_loader:
-                # 使用统一的XCOMET GPU选择逻辑
-                xcomet_gpu_ids, should_set_env = get_xcomet_gpu_setting(args)
-                
-                if args.xcomet_cpu:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 强制使用CPU模式（--xcomet_cpu）")
-                elif args.xcomet_gpus and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 通过参数指定使用GPU: {xcomet_gpu_ids}")
-                elif xcomet_gpu_ids and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 使用环境变量CUDA_VISIBLE_DEVICES={xcomet_gpu_ids}")
-                else:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 默认使用CPU模式")
-                
-                final_xcomet_triplets = []
-                final_xcomet_indices = []
-                for idx in range(num_samples):
-                    final_translation = results[idx].get('final_translation')
-                    if final_translation:
-                        src_text = str(results[idx]['src_text']).strip() if results[idx]['src_text'] else ""
-                        ref_text = str(results[idx]['tgt_text']).strip() if results[idx]['tgt_text'] else ""
-                        if src_text and ref_text:
-                            final_xcomet_triplets.append({
-                                "src": src_text,
-                                "mt": final_translation,
-                                "ref": ref_text
-                            })
-                            final_xcomet_indices.append(idx)
-                if final_xcomet_triplets:
-                    try:
-                        print(f"[XCOMET] 批量评分 {len(final_xcomet_triplets)} 个终稿翻译...")
-                        xcomet_final_results = xcomet_loader.predict(
-                            final_xcomet_triplets,
-                            batch_size=args.xcomet_batch_size,
-                            return_system_score=True
-                        )
-                        for result_idx, final_idx in enumerate(final_xcomet_indices):
-                            if result_idx < len(xcomet_final_results):
-                                xcomet_analysis_final = xcomet_final_results[result_idx]
-                                results[final_idx]['xcomet_final'] = xcomet_analysis_final
-                            else:
-                                results[final_idx]['xcomet_final'] = {
-                                    "score": None,
-                                    "error_spans": [],
-                                    "error": "XCOMET final result index out of range",
-                                }
-                    except Exception as e:
-                        error_count = xcomet_loader._error_count
-                        xcomet_loader._error_count = error_count + 1
-                        if error_count < 3:
-                            print(f"[Warning] 批量XCOMET终稿评分失败: {str(e)[:100]}")
-                        elif error_count == 3:
-                            print(f"[Warning] XCOMET错误过多，后续错误将静默处理...")
-                        for final_idx in final_xcomet_indices:
-                            if 'xcomet_final' not in results[final_idx]:
-                                results[final_idx]['xcomet_final'] = {
-                                    "score": None,
-                                    "error_spans": [],
-                                    "error": str(e)[:200] if error_count < 3 else "Multiple errors (suppressed)",
-                                }
-                else:
-                    print("[XCOMET] 没有需要评分的终稿翻译")
-                
-                if torch.cuda.is_available() and qwen_gpu_ids:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-                    print(f"[Stage] 恢复Qwen的CUDA_VISIBLE_DEVICES={qwen_gpu_ids}")
-        
-        else:
-            # ========== 基线模式流程 ==========
-            
-            # ========== 阶段1：批量生成所有数据的初稿 ==========
-            print("\n" + "="*60)
-            print("阶段1: 批量生成所有数据的初稿")
-            print("="*60)
-            
-            all_draft_generated_texts = []
-            for i in tqdm(range(0, num_samples, args.batch_size), desc="生成初稿"):
-                batch = dataset_df.iloc[i:i+args.batch_size]
-                prompts = batch['prompt'].tolist()
-                
+
+        # 批量生成repair翻译
+        if repair_prompts:
+            all_repair_generated_texts = []
+            for i in tqdm(
+                range(0, len(repair_prompts), args.batch_size), desc="生成repair翻译"
+            ):
+                batch_prompts = repair_prompts[i : i + args.batch_size]
                 try:
-                    generated_texts = qwen_generator.generate_draft(
-                        prompts,
-                        mode="draft",
+                    repair_texts = qwen_generator.generate_draft(
+                        batch_prompts,
+                        mode="repair",
                         max_tokens=args.max_tokens,
                         temperature=args.temperature,
-                        top_p=args.top_p
+                        top_p=args.top_p,
                     )
-                    if isinstance(generated_texts, str):
-                        generated_texts = [generated_texts]
-                    if len(generated_texts) != len(batch):
-                        print(f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch)})不匹配，使用空字符串填充")
-                        generated_texts = list(generated_texts) + [""] * (len(batch) - len(generated_texts))
+                    if isinstance(repair_texts, str):
+                        repair_texts = [repair_texts]
+                    if len(repair_texts) != len(batch_prompts):
+                        print(
+                            f"[Warning] Repair生成文本数量({len(repair_texts)})与批次大小({len(batch_prompts)})不匹配"
+                        )
+                        repair_texts = list(repair_texts) + [""] * (
+                            len(batch_prompts) - len(repair_texts)
+                        )
                 except Exception as e:
-                    print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
+                    print(
+                        f"\n[Error] Repair generation failed for batch starting at index {i}: {e}"
+                    )
                     import traceback
+
                     traceback.print_exc()
-                    generated_texts = [""] * len(batch)
-                
-                all_draft_generated_texts.extend(generated_texts)
-            
-            # 保存初稿生成结果
-            for idx, draft_text in enumerate(all_draft_generated_texts):
-                results[idx]['draft_generated_text'] = draft_text
-            
-            # ========== 阶段2：对所有初稿进行格式检查 ==========
-            print("\n" + "="*60)
-            print("阶段2: 对所有初稿进行格式检查")
-            print("="*60)
-            
-            for idx in tqdm(range(num_samples), desc="检查初稿格式"):
-                draft_text = results[idx]['draft_generated_text']
-                format_valid, draft_translation, format_score = check_and_extract_translate_tag(draft_text)
-                results[idx]['draft_format_score'] = format_score
-                results[idx]['draft_translation'] = draft_translation if format_valid else None
-         
-            # ========== 阶段3：对所有初稿翻译进行XCOMET评分 ==========
-            print("\n" + "="*60)
-            print("阶段3: 对所有初稿翻译进行XCOMET评分")
-            print("="*60)
-            
-            if xcomet_loader:
-                # 使用统一的XCOMET GPU选择逻辑
-                xcomet_gpu_ids, should_set_env = get_xcomet_gpu_setting(args)
-                
-                if args.xcomet_cpu:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 强制使用CPU模式（--xcomet_cpu）")
-                elif args.xcomet_gpus:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 通过参数指定使用GPU: {xcomet_gpu_ids}")
-                elif xcomet_gpu_ids and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 使用环境变量CUDA_VISIBLE_DEVICES={xcomet_gpu_ids}")
-                else:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 默认使用CPU模式")
+                    repair_texts = [""] * len(batch_prompts)
 
-                draft_xcomet_triplets = []
-                draft_xcomet_indices = []
-                for idx in range(num_samples):
-                    format_valid = results[idx].get('draft_format_score', 0) == 1
-                    draft_translation = results[idx].get('draft_translation')
-                    if format_valid and draft_translation:
-                        src_text = str(results[idx]['src_text']).strip() if results[idx]['src_text'] else ""
-                        ref_text = str(results[idx]['tgt_text']).strip() if results[idx]['tgt_text'] else ""
-                        if src_text and ref_text:
-                            draft_xcomet_triplets.append({
-                                "src": src_text,
-                                "mt": draft_translation,
-                                "ref": ref_text
-                            })
-                            draft_xcomet_indices.append(idx)
-                if draft_xcomet_triplets:
-                    try:
-                        print(f"[XCOMET] 批量评分 {len(draft_xcomet_triplets)} 个初稿翻译...")
-                        xcomet_results = xcomet_loader.predict(
-                            draft_xcomet_triplets,
-                            batch_size=args.xcomet_batch_size,
-                            return_system_score=True
-                        )
-                        for result_idx, xcomet_idx in enumerate(draft_xcomet_indices):
-                            if result_idx < len(xcomet_results):
-                                xcomet_analysis = xcomet_results[result_idx]
-                                results[xcomet_idx]['xcomet_draft'] = xcomet_analysis
-                            else:
-                                results[xcomet_idx]['xcomet_draft'] = {
-                                    "score": None,
-                                    "error_spans": [],
-                                    "error": "XCOMET result index out of range",
-                                }
-                    except Exception as e:
-                        error_count = xcomet_loader._error_count
-                        xcomet_loader._error_count = error_count + 1
-                        if error_count < 3:
-                            print(f"[Warning] 批量XCOMET评分失败: {str(e)[:100]}")
-                        elif error_count == 3:
-                            print(f"[Warning] XCOMET错误过多，后续错误将静默处理...")
-                        for xcomet_idx in draft_xcomet_indices:
-                            if 'xcomet_draft' not in results[xcomet_idx]:
-                                results[xcomet_idx]['xcomet_draft'] = {
-                                    "score": None,
-                                    "error_spans": [],
-                                    "error": str(e)[:200] if error_count < 3 else "Multiple errors (suppressed)",
-                                }
-                else:
-                    print("[XCOMET] 没有需要评分的初稿翻译")
+                all_repair_generated_texts.extend(repair_texts)
 
-                for idx in range(num_samples):
-                    if 'xcomet_draft' not in results[idx]:
-                        format_valid = results[idx].get('draft_format_score', 0) == 1
-                        draft_translation = results[idx].get('draft_translation')
-                        if not format_valid or not draft_translation:
-                            results[idx]['xcomet_draft'] = {
-                                "score": None,
-                                "error_spans": [],
-                                "error": "Draft format invalid or translation is empty" if not format_valid else "Draft translation is empty",
-                            }
-                        else:
-                            results[idx]['xcomet_draft'] = {
-                                "score": None,
-                                "error_spans": [],
-                                "error": "XCOMET loader not available",
-                            }
+            # 保存repair结果
+            for prompt_idx, result_idx in enumerate(repair_indices):
+                repair_text = all_repair_generated_texts[prompt_idx]
+                results[result_idx]["repair_generated_text"] = repair_text
 
-                if torch.cuda.is_available() and qwen_gpu_ids:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-                    print(f"[Stage] 恢复Qwen的CUDA_VISIBLE_DEVICES={qwen_gpu_ids}")
-
-            # ========== 阶段4：批量生成所有数据的终稿（repair） ==========
-            print("\n" + "="*60)
-            print("阶段4: 批量生成所有数据的终稿（repair）")
-            print("="*60)
-            
-            # 收集需要repair的样本
-            repair_prompts = []
-            repair_indices = []
-            
-            for idx in range(num_samples):
-                format_valid = results[idx].get('draft_format_score', 0) == 1
-                draft_translation = results[idx].get('draft_translation')
-                xcomet_draft = results[idx].get('xcomet_draft', {})
-                error_spans = xcomet_draft.get('error_spans', []) if isinstance(xcomet_draft, dict) else []
-                
-                # 情况1：如果没有初稿，跳过refinement
-                if not draft_translation:
-                    results[idx]['repair_generated_text'] = None
-                    results[idx]['repair_prompt'] = None
-                    results[idx]['repair_format_score'] = 0
-                    results[idx]['final_translation'] = None
-                
-                # 情况2：如果有初稿但无错误，跳过refinement，直接使用初稿
-                elif format_valid and draft_translation and (not error_spans or len(error_spans) == 0):
-                    results[idx]['repair_generated_text'] = None
-                    results[idx]['repair_prompt'] = None
-                    results[idx]['repair_format_score'] = 0
-                    results[idx]['final_translation'] = draft_translation
-                
-                # 情况3：有初稿且有错误，需要repair
-                elif format_valid and draft_translation and error_spans:
-                    try:
-                        repair_example = {
-                            'lg': results[idx]['lang_pair'],
-                            'src_text': results[idx]['src_text'],
-                        }
-                        repair_prompt = make_prefix(
-                            repair_example,
-                            template_type='repair',
-                            tokenizer=tokenizer,
-                            error_spans=error_spans,
-                            draft_translation=draft_translation
-                        )
-                        repair_prompts.append(repair_prompt)
-                        repair_indices.append(idx)
-                    except Exception as e:
-                        print(f"[Warning] 构建repair prompt失败 for sample {results[idx]['index']}: {str(e)[:100]}")
-                        results[idx]['repair_generated_text'] = None
-                        results[idx]['repair_prompt'] = None
-                        results[idx]['repair_format_score'] = 0
-                        results[idx]['final_translation'] = None
-            
-            # 批量生成repair翻译
-            if repair_prompts:
-                all_repair_generated_texts = []
-                for i in tqdm(range(0, len(repair_prompts), args.batch_size), desc="生成repair翻译"):
-                    batch_prompts = repair_prompts[i:i+args.batch_size]
-                    try:
-                        repair_texts = qwen_generator.generate_draft(
-                            batch_prompts,
-                            mode="repair",
-                            max_tokens=args.max_tokens,
-                            temperature=args.temperature,
-                            top_p=args.top_p
-                        )
-                        if isinstance(repair_texts, str):
-                            repair_texts = [repair_texts]
-                        if len(repair_texts) != len(batch_prompts):
-                            print(f"[Warning] Repair生成文本数量({len(repair_texts)})与批次大小({len(batch_prompts)})不匹配")
-                            repair_texts = list(repair_texts) + [""] * (len(batch_prompts) - len(repair_texts))
-                    except Exception as e:
-                        print(f"\n[Error] Repair generation failed for batch starting at index {i}: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        repair_texts = [""] * len(batch_prompts)
-                    
-                    all_repair_generated_texts.extend(repair_texts)
-                
-                # 保存repair结果
-                for prompt_idx, result_idx in enumerate(repair_indices):
-                    if prompt_idx < len(all_repair_generated_texts):
-                        repair_text = all_repair_generated_texts[prompt_idx]
-                        results[result_idx]['repair_generated_text'] = repair_text
-                        repair_example = {
-                            'lg': results[result_idx]['lang_pair'],
-                            'src_text': results[result_idx]['src_text'],
-                        }
-                        xcomet_draft = results[result_idx].get('xcomet_draft', {})
-                        error_spans = xcomet_draft.get('error_spans', []) if isinstance(xcomet_draft, dict) else []
-                        draft_translation = results[result_idx].get('draft_translation')
-                        results[result_idx]['repair_prompt'] = make_prefix(
-                            repair_example,
-                            template_type='repair',
-                            tokenizer=tokenizer,
-                            error_spans=error_spans,
-                            draft_translation=draft_translation
-                        )
-                    else:
-                        results[result_idx]['repair_generated_text'] = None
-                        results[result_idx]['repair_prompt'] = None
-                        results[result_idx]['repair_format_score'] = 0
-                        results[result_idx]['final_translation'] = None
-            
-            # ========== 阶段5：对所有终稿进行格式检查 ==========
-            print("\n" + "="*60)
-            print("阶段5: 对所有终稿进行格式检查")
-            print("="*60)
-            
-            for idx in tqdm(range(num_samples), desc="检查终稿格式"):
-                if results[idx].get('final_translation') is not None and results[idx].get('repair_generated_text') is None:
-                    results[idx]['repair_format_score'] = 0
-                    continue
-                repair_generated_text = results[idx].get('repair_generated_text')
-                if repair_generated_text:
-                    repair_format_valid, final_translation, repair_format_score = check_and_extract_translate_tag(repair_generated_text)
-                    results[idx]['repair_format_score'] = repair_format_score
-                    results[idx]['final_translation'] = final_translation if repair_format_valid else None
-                else:
-                    if 'repair_format_score' not in results[idx]:
-                        results[idx]['repair_format_score'] = 0
-                    if 'final_translation' not in results[idx]:
-                        results[idx]['final_translation'] = None
-            
-            # ========== 阶段6：对所有终稿翻译进行XCOMET评分 ==========
-            print("\n" + "="*60)
-            print("阶段6: 对所有终稿翻译进行XCOMET评分")
-            print("="*60)
-            
-            if xcomet_loader:
-                # 使用统一的XCOMET GPU选择逻辑
-                xcomet_gpu_ids, should_set_env = get_xcomet_gpu_setting(args)
-                
-                if args.xcomet_cpu:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 强制使用CPU模式（--xcomet_cpu）")
-                elif args.xcomet_gpus and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 通过参数指定使用GPU: {xcomet_gpu_ids}")
-                elif xcomet_gpu_ids and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                    print(f"[XCOMET] 使用环境变量CUDA_VISIBLE_DEVICES={xcomet_gpu_ids}")
-                else:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                    print("[XCOMET] 默认使用CPU模式")
-                
-                final_xcomet_triplets = []
-                final_xcomet_indices = []
-                for idx in range(num_samples):
-                    final_translation = results[idx].get('final_translation')
-                    if final_translation:
-                        src_text = str(results[idx]['src_text']).strip() if results[idx]['src_text'] else ""
-                        ref_text = str(results[idx]['tgt_text']).strip() if results[idx]['tgt_text'] else ""
-                        if src_text and ref_text:
-                            final_xcomet_triplets.append({
-                                "src": src_text,
-                                "mt": final_translation,
-                                "ref": ref_text
-                            })
-                            final_xcomet_indices.append(idx)
-                if final_xcomet_triplets:
-                    try:
-                        print(f"[XCOMET] 批量评分 {len(final_xcomet_triplets)} 个终稿翻译...")
-                        xcomet_final_results = xcomet_loader.predict(
-                            final_xcomet_triplets,
-                            batch_size=args.xcomet_batch_size,
-                            return_system_score=True
-                        )
-                        for result_idx, final_idx in enumerate(final_xcomet_indices):
-                            if result_idx < len(xcomet_final_results):
-                                xcomet_analysis_final = xcomet_final_results[result_idx]
-                                results[final_idx]['xcomet_final'] = xcomet_analysis_final
-                            else:
-                                results[final_idx]['xcomet_final'] = {
-                                    "score": None,
-                                    "error_spans": [],
-                                    "error": "XCOMET final result index out of range",
-                                }
-                    except Exception as e:
-                        error_count = xcomet_loader._error_count
-                        xcomet_loader._error_count = error_count + 1
-                        if error_count < 3:
-                            print(f"[Warning] 批量XCOMET终稿评分失败: {str(e)[:100]}")
-                        elif error_count == 3:
-                            print(f"[Warning] XCOMET错误过多，后续错误将静默处理...")
-                        for final_idx in final_xcomet_indices:
-                            if 'xcomet_final' not in results[final_idx]:
-                                results[final_idx]['xcomet_final'] = {
-                                    "score": None,
-                                    "error_spans": [],
-                                    "error": str(e)[:200] if error_count < 3 else "Multiple errors (suppressed)",
-                                }
-                else:
-                    print("[XCOMET] 没有需要评分的终稿翻译")
-                
-                if torch.cuda.is_available():
-                    if qwen_gpu_ids:
-                        os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-                        print(f"[Stage] 恢复Qwen的CUDA_VISIBLE_DEVICES={qwen_gpu_ids}")
-                    else:
-                        # 如果没有指定qwen_gpu_ids，清除CUDA_VISIBLE_DEVICES（使用CPU）
-                        if "CUDA_VISIBLE_DEVICES" in os.environ:
-                            del os.environ["CUDA_VISIBLE_DEVICES"]
-                        print(f"[Stage] 清除CUDA_VISIBLE_DEVICES（Qwen使用CPU）")
-    
-    # ========== 从results.json读取数据并进行refinement的处理 ==========
-    if skip_draft_generation:
-        # 需要加载Qwen和XCOMET模型
+        # ========== 阶段5：对所有终稿进行格式检查 ==========
         print("\n" + "="*60)
-        print("加载模型进行refinement")
+        print("阶段5: 对所有终稿进行格式检查")
         print("="*60)
-        
-        # 加载XCOMET（如果需要）
-        if args.load_xcomet:
-            if args.xcomet_ckpt:
-                xcomet_ckpt = args.xcomet_ckpt
-            elif os.getenv("WORD_QE_CKPT"):
-                xcomet_ckpt = os.getenv("WORD_QE_CKPT")
-            else:
-                default_ckpt = os.path.expanduser("~/models/XCOMET-XL/checkpoints/model.ckpt")
-                xcomet_ckpt = default_ckpt if os.path.exists(default_ckpt) else None
-            
-            if xcomet_ckpt:
-                # 使用统一的XCOMET GPU选择逻辑
-                xcomet_gpu_ids, _ = get_xcomet_gpu_setting(args)
-                
-                try:
-                    xcomet_loader = XCOMETLoader(
-                        xcomet_ckpt,
-                        force_cpu=args.xcomet_cpu or (xcomet_gpu_ids is None),
-                        gpu_ids=xcomet_gpu_ids
-                    )
-                    print("[XCOMET] XCOMET model loaded successfully")
-                except Exception as e:
-                    print(f"[XCOMET] Failed to load XCOMET: {e}")
-                    xcomet_loader = None
-            else:
-                xcomet_loader = None
-        else:
-            xcomet_loader = None
-        
-        # 加载Qwen模型
-        print(f"[Qwen] Loading Qwen model from {args.qwen_model_path}...")
-        original_cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-        
-        # GPU选择逻辑（与主流程一致）：
-        # 1. 默认：CPU模式
-        # 2. 如果设置了 --qwen_cpu，强制CPU模式
-        # 3. 如果设置了 --qwen_gpus，使用指定的GPU
-        # 4. 如果只设置了CUDA_VISIBLE_DEVICES，且没有分别设置qwen_gpus和xcomet_gpus，则使用CUDA_VISIBLE_DEVICES
-        # 5. 否则，使用CPU
-        import torch
-        if args.qwen_cpu:
-            # 强制CPU模式
-            qwen_gpu_ids = None
-            if "CUDA_VISIBLE_DEVICES" in os.environ:
-                del os.environ["CUDA_VISIBLE_DEVICES"]
-            print("[Qwen] 强制使用CPU模式（--qwen_cpu）")
-        elif args.qwen_gpus:
-            # 通过参数指定GPU
-            qwen_gpu_ids = args.qwen_gpus
-            os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-            print(f"[Qwen] 通过参数指定使用GPU: {qwen_gpu_ids}")
-        elif original_cuda_visible and not args.xcomet_gpus:
-            # 如果只设置了CUDA_VISIBLE_DEVICES，且没有分别设置xcomet_gpus，则两者都使用CUDA_VISIBLE_DEVICES
-            qwen_gpu_ids = original_cuda_visible
-            os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-            print(f"[Qwen] 使用环境变量CUDA_VISIBLE_DEVICES={qwen_gpu_ids}")
-        else:
-            # 默认CPU模式
-            qwen_gpu_ids = None
-            if "CUDA_VISIBLE_DEVICES" in os.environ:
-                del os.environ["CUDA_VISIBLE_DEVICES"]
-            print("[Qwen] 默认使用CPU模式")
-        
-        vllm_extra_kwargs = {}
-        if args.use_vllm:
-            if args.vllm_max_num_seqs:
-                vllm_extra_kwargs["max_num_seqs"] = args.vllm_max_num_seqs
-            vllm_extra_kwargs["disable_custom_all_reduce"] = True
 
-        try:
-            qwen_generator = QwenGenerator(
-                model_path=args.qwen_model_path,
-                use_vllm=args.use_vllm if not args.qwen_cpu else False,  # CPU模式下不使用vLLM
-                device="cpu" if args.qwen_cpu else None,  # CPU模式下明确指定device
-                gpu_memory_utilization=args.gpu_memory_utilization,
-                **vllm_extra_kwargs
-            )
-            print("[Qwen] Qwen model loaded successfully")
-        except Exception as e:
-            print(f"[Qwen] Failed to load Qwen model: {e}")
-            qwen_generator = QwenGenerator(
-                model_path=args.qwen_model_path,
-                use_vllm=False,
-                device="cpu" if args.qwen_cpu else None,  # CPU模式下明确指定device
-                gpu_memory_utilization=args.gpu_memory_utilization
-            )
-        
-        # 处理每个已有结果
-        results = []
-        
-        # ========== 步骤5：先处理格式检查，收集需要XCOMET评分的样本 ==========
-        batch_results = []
-        draft_xcomet_triplets = []
-        draft_xcomet_indices = []
-        
-        for idx, (_, row) in enumerate(dataset_df.iterrows()):
-            result = row.to_dict()
-            
-            # 从results.json中读取draft_generated_text
-            draft_text = result.get('draft_generated_text', '')
-            if not draft_text:
-                # 如果没有draft_generated_text，尝试使用generated_text
-                draft_text = result.get('generated_text', '')
-            
-            # 检查draft格式，提取<translate>部分作为初稿
-            format_valid, draft_translation, format_score = check_and_extract_translate_tag(draft_text)
-            
-            # 更新结果
-            result['draft_format_score'] = format_score
-            result['draft_translation'] = draft_translation if format_valid else None
-            
-            # 如果results.json中已有xcomet_draft数据，使用它
-            if result.get('xcomet_draft') and isinstance(result['xcomet_draft'], dict):
-                # 已有XCOMET结果，直接使用
-                pass
-            elif format_valid and draft_translation and xcomet_loader:
-                # 需要XCOMET评分，收集样本
-                src_text = str(result.get('src_text', '')).strip()
-                ref_text = str(result.get('tgt_text', '')).strip()
-                if src_text and ref_text:
-                    draft_xcomet_triplets.append({
-                        "src": src_text,
-                        "mt": draft_translation,
-                        "ref": ref_text
-                    })
-                    draft_xcomet_indices.append(idx)
+        for idx in tqdm(range(num_samples), desc="检查终稿格式"):
+            # 有初稿、无错误，直接使用初稿，不需要额外格式检查
+            if (
+                results[idx].get("final_translation") is not None
+                and results[idx].get("repair_generated_text") is None
+            ):
+                results[idx]["repair_format_score"] = 0
+                continue
+
+            repair_generated_text = results[idx].get("repair_generated_text")
+            if repair_generated_text:
+                (
+                    repair_format_valid,
+                    final_translation,
+                    repair_format_score,
+                ) = check_and_extract_translate_tag(repair_generated_text)
+                results[idx]["repair_format_score"] = repair_format_score
+                results[idx]["final_translation"] = (
+                    final_translation if repair_format_valid else None
+                )
+
+        # ========== 阶段6：对所有终稿翻译进行XCOMET评分 ==========
+        print("\n" + "="*60)
+        print("阶段6: 对所有终稿翻译进行XCOMET评分")
+        print("="*60)
+
+        if xcomet_loader:
+            final_xcomet_triplets = []
+            final_xcomet_indices = []
+            for idx in range(num_samples):
+                final_translation = results[idx].get("final_translation")
+                if final_translation:
+                    src_text = (
+                        str(results[idx]["src_text"]).strip()
+                        if results[idx]["src_text"]
+                        else ""
+                    )
+                    ref_text = (
+                        str(results[idx]["tgt_text"]).strip()
+                        if results[idx]["tgt_text"]
+                        else ""
+                    )
+                    if src_text and ref_text:
+                        final_xcomet_triplets.append(
+                            {"src": src_text, "mt": final_translation, "ref": ref_text}
+                        )
+                        final_xcomet_indices.append(idx)
+
+            if final_xcomet_triplets:
+                try:
+                    print(
+                        f"[XCOMET] 批量评分 {len(final_xcomet_triplets)} 个终稿翻译..."
+                    )
+                    xcomet_final_results = xcomet_loader.predict(
+                        final_xcomet_triplets,
+                        batch_size=args.xcomet_batch_size,
+                        return_system_score=True,
+                    )
+                    for result_idx, final_idx in enumerate(final_xcomet_indices):
+                        if result_idx < len(xcomet_final_results):
+                            xcomet_analysis_final = xcomet_final_results[result_idx]
+                            results[final_idx]["xcomet_final"] = xcomet_analysis_final
+                        else:
+                            results[final_idx]["xcomet_final"] = {
+                                "score": None,
+                                "error_spans": [],
+                                "error": "XCOMET final result index out of range",
+                            }
+                except Exception as e:
+                    error_count = getattr(xcomet_loader, "_error_count", 0)
+                    xcomet_loader._error_count = error_count + 1
+                    if error_count < 3:
+                        print(f"[Warning] 批量XCOMET终稿评分失败: {str(e)[:100]}")
+                    elif error_count == 3:
+                        print("[Warning] XCOMET错误过多，后续错误将静默处理...")
+                    for final_idx in final_xcomet_indices:
+                        if "xcomet_final" not in results[final_idx]:
+                            results[final_idx]["xcomet_final"] = {
+                                "score": None,
+                                "error_spans": [],
+                                "error": str(e)[:200]
+                                if error_count < 3
+                                else "Multiple errors (suppressed)",
+                            }
             else:
-                result['xcomet_draft'] = {
-                    "score": None,
-                    "error_spans": [],
-                    "error": "XCOMET not available or format invalid",
-                }
-            
-            batch_results.append(result)
-        
-        # ========== 步骤6：批量调用XCOMET对draft进行评分 ==========
-        if draft_xcomet_triplets and xcomet_loader:
-            try:
-                # 使用统一的XCOMET GPU选择逻辑
-                xcomet_gpu_ids, should_set_env = get_xcomet_gpu_setting(args)
-                xcomet_cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-                
-                if args.xcomet_cpu:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                elif args.xcomet_gpus and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                elif xcomet_gpu_ids and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                else:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                
-                # 批量调用XCOMET
-                xcomet_results = xcomet_loader.predict(
-                    draft_xcomet_triplets,
-                    batch_size=args.xcomet_batch_size,
-                    return_system_score=True
-                )
-                
-                # 将结果映射回每个样本
-                for result_idx, xcomet_idx in enumerate(draft_xcomet_indices):
-                    if result_idx < len(xcomet_results):
-                        xcomet_analysis = xcomet_results[result_idx]
-                        batch_results[xcomet_idx]['xcomet_draft'] = xcomet_analysis
-                    else:
-                        batch_results[xcomet_idx]['xcomet_draft'] = {
+                print("[XCOMET] 没有需要评分的终稿翻译")
+        else:
+            print("[XCOMET] 未加载，跳过终稿评分")
+            for idx in range(num_samples):
+                if "final_translation" in results[idx] and results[idx]["final_translation"]:
+                    if "xcomet_final" not in results[idx]:
+                        results[idx]["xcomet_final"] = {
                             "score": None,
                             "error_spans": [],
-                            "error": "XCOMET result index out of range",
+                            "error": "XCOMET loader not available",
                         }
-                
-                # 恢复Qwen的CUDA_VISIBLE_DEVICES
-                if xcomet_cuda_visible is not None and qwen_gpu_ids:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-            except Exception as e:
-                # 恢复Qwen的CUDA_VISIBLE_DEVICES
-                if xcomet_cuda_visible is not None and qwen_gpu_ids:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-                
-                error_count = xcomet_loader._error_count
-                xcomet_loader._error_count = error_count + 1
-                if error_count < 3:
-                    print(f"[Warning] 批量XCOMET评分失败: {str(e)[:100]}")
-                elif error_count == 3:
-                    print(f"[Warning] XCOMET错误过多，后续错误将静默处理...")
-                
-                # 为所有需要评分的样本设置错误信息
-                for xcomet_idx in draft_xcomet_indices:
-                    if 'xcomet_draft' not in batch_results[xcomet_idx] or not isinstance(batch_results[xcomet_idx].get('xcomet_draft'), dict):
-                        batch_results[xcomet_idx]['xcomet_draft'] = {
-                            "score": None,
-                            "error_spans": [],
-                            "error": str(e)[:200] if error_count < 3 else "Multiple errors (suppressed)",
-                        }
-        
-        # ========== 步骤7-8：处理refinement ==========
-        for idx, result in enumerate(tqdm(batch_results, desc="Processing refinement")):
-            format_valid = result.get('draft_format_score', 0) == 1
-            draft_translation = result.get('draft_translation')
-            xcomet_draft = result.get('xcomet_draft', {})
-            error_spans = xcomet_draft.get('error_spans', []) if isinstance(xcomet_draft, dict) else []
-            
-            # ========== 步骤7-8：处理repair和final_translation ==========
-            repair_generated_text = None
-            repair_prompt = None
-            repair_format_valid = False
-            repair_format_score = 0
-            final_translation = None
-            
-            # 情况1：如果没有初稿，跳过refinement，所有repair参数和final_translation都为空
-            if not draft_translation:
-                print(f"[Info] 样本 {result.get('index', '?')} 无初稿，跳过refinement")
-                # 所有字段保持为None/False/0，已在上面初始化
-            
-            # 情况2：如果有初稿，检查是否有错误spans
-            elif format_valid and draft_translation:
-                if not error_spans or len(error_spans) == 0:
-                    # 如果没有错误spans，说明初稿完美，跳过refinement
-                    # repair所有参数为空，但final_translation直接设置为初稿翻译本身
-                    # 注意：这种情况下final_translation仍会被XCOMET评分（在后续批量评分阶段）
-                    print(f"[Info] 样本 {result.get('index', '?')} 初稿无错误，跳过refinement，直接使用初稿作为终稿（将对终稿进行XCOMET评分）")
-                    repair_generated_text = None
-                    repair_prompt = None
-                    repair_format_valid = False
-                    repair_format_score = 0
-                    final_translation = draft_translation
-                else:
-                    # 有错误spans，进行repair
-                    try:
-                        # 构建repair prompt（直接传递error_spans列表）
-                        repair_example = {
-                            'lg': result.get('lang_pair', ''),
-                            'src_text': result.get('src_text', ''),
-                        }
-                        repair_prompt = make_prefix(
-                            repair_example,
-                            template_type='repair',
-                            tokenizer=tokenizer,
-                            error_spans=error_spans,  # 直接传递error_spans列表
-                            draft_translation=draft_translation
-                        )
-                        repair_texts = qwen_generator.generate_draft(
-                            repair_prompt,
-                            mode="repair",
-                            max_tokens=args.max_tokens,
-                            temperature=args.temperature,
-                            top_p=args.top_p
-                        )
-                        repair_generated_text = repair_texts if isinstance(repair_texts, str) else repair_texts[0] if repair_texts else None
-                        
-                        # 检查repair格式，提取<translate>部分作为终稿
-                        if repair_generated_text:
-                            repair_format_valid, final_translation, repair_format_score = check_and_extract_translate_tag(repair_generated_text)
-                    
-                    except Exception as e:
-                        print(f"[Warning] Repair generation failed for sample {result.get('index', '?')}: {str(e)[:100]}")
-                        repair_generated_text = None
-                        repair_prompt = None
-                        repair_format_valid = False
-                        repair_format_score = 0
-                        final_translation = None
-            
-            # 保存结果
-            result['repair_generated_text'] = repair_generated_text
-            result['repair_prompt'] = repair_prompt
-            result['repair_format_score'] = repair_format_score
-            result['final_translation'] = final_translation
-            
-            batch_results[idx] = result
-        
-        # ========== 批量对终稿调用XCOMET评分（可选） ==========
-        final_xcomet_triplets = []
-        final_xcomet_indices = []
-        
-        for idx, result in enumerate(batch_results):
-            # 注意：现在final_translation可能不是通过repair_format_valid判断的
-            # 如果没有错误spans，final_translation会直接设置为初稿，但repair_format_score为0
-            # 这种情况下也需要对final_translation进行XCOMET评分
-            final_translation = result.get('final_translation')
-            # 只要有final_translation就可以进行终稿评分（包括：repair后的终稿、无错误时直接使用初稿作为终稿）
-            if final_translation and xcomet_loader:
-                src_text = str(result.get('src_text', '')).strip()
-                ref_text = str(result.get('tgt_text', '')).strip()
-                if src_text and ref_text:
-                    final_xcomet_triplets.append({
-                        "src": src_text,
-                        "mt": final_translation,
-                        "ref": ref_text
-                    })
-                    final_xcomet_indices.append(idx)
-        
-        if final_xcomet_triplets and xcomet_loader:
-            try:
-                # 使用统一的XCOMET GPU选择逻辑
-                xcomet_gpu_ids, should_set_env = get_xcomet_gpu_setting(args)
-                xcomet_cuda_visible = os.environ.get("CUDA_VISIBLE_DEVICES", None)
-                
-                if args.xcomet_cpu:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                elif args.xcomet_gpus and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                elif xcomet_gpu_ids and should_set_env:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = xcomet_gpu_ids
-                else:
-                    if "CUDA_VISIBLE_DEVICES" in os.environ:
-                        del os.environ["CUDA_VISIBLE_DEVICES"]
-                
-                # 批量调用XCOMET对终稿评分
-                xcomet_final_results = xcomet_loader.predict(
-                    final_xcomet_triplets,
-                    batch_size=args.xcomet_batch_size,
-                    return_system_score=True
-                )
-                
-                # 将结果映射回每个样本
-                for result_idx, final_idx in enumerate(final_xcomet_indices):
-                    if result_idx < len(xcomet_final_results):
-                        xcomet_analysis_final = xcomet_final_results[result_idx]
-                        batch_results[final_idx]['xcomet_final'] = xcomet_analysis_final
-                    else:
-                        batch_results[final_idx]['xcomet_final'] = {
-                            "score": None,
-                            "error_spans": [],
-                            "error": "XCOMET final result index out of range",
-                        }
-                
-                # 恢复Qwen的CUDA_VISIBLE_DEVICES
-                if xcomet_cuda_visible is not None and qwen_gpu_ids:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-            except Exception as e:
-                # 恢复Qwen的CUDA_VISIBLE_DEVICES
-                if xcomet_cuda_visible is not None and qwen_gpu_ids:
-                    os.environ["CUDA_VISIBLE_DEVICES"] = qwen_gpu_ids
-                
-                error_count = xcomet_loader._error_count
-                xcomet_loader._error_count = error_count + 1
-                if error_count < 3:
-                    print(f"[Warning] 批量XCOMET终稿评分失败: {str(e)[:100]}")
-                elif error_count == 3:
-                    print(f"[Warning] XCOMET错误过多，后续错误将静默处理...")
-                
-                # 为所有需要评分的样本设置错误信息
-                for final_idx in final_xcomet_indices:
-                    if 'xcomet_final' not in batch_results[final_idx]:
-                        batch_results[final_idx]['xcomet_final'] = {
-                            "score": None,
-                            "error_spans": [],
-                            "error": str(e)[:200] if error_count < 3 else "Multiple errors (suppressed)",
-                        }
-        
-        results = batch_results
-    
-    print(f"\n[Generation] Generated {len(results)} translations")
-    
+
     # ========== 5. 保存结果 ==========
     if args.output_file:
         print("\n" + "="*60)
@@ -1585,33 +1294,43 @@ def main():
         )
         
         # 保存为JSON
+        output_txt = "xcomet_all_stats.txt"
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(results, f, ensure_ascii=False, indent=2)
-        print(f"[Output] Results saved to {output_path}")
+        log_stats(f"[Output] Results saved to {output_path}", output_file=output_txt)
         
         # 打印统计信息
-        # 格式统计
         draft_format_scores = [r.get('draft_format_score', 0) for r in results]
         repair_format_scores = [r.get('repair_format_score', 0) for r in results]
         draft_valid_count = sum(draft_format_scores)
         repair_valid_count = sum(repair_format_scores)
-        print(f"[Stats] Draft格式正确率: {draft_valid_count}/{len(results)} ({100*draft_valid_count/len(results):.1f}%)")
-        print(f"[Stats] Repair格式正确率: {repair_valid_count}/{len(results)} ({100*repair_valid_count/len(results):.1f}%)")
+
         
-        # XCOMET统计（初稿）
+        num_samples = len(results)
+        log_stats(
+            f"[Stats] Draft格式正确率: {draft_valid_count}/{num_samples} ({100*draft_valid_count/num_samples:.1f}%)",
+            output_file=output_txt,
+        )
+        log_stats(
+            f"[Stats] Repair格式正确率: {repair_valid_count}/{num_samples} ({100*repair_valid_count/num_samples:.1f}%)",
+            output_file=output_txt,
+        )
+
         if xcomet_loader:
+            # XCOMET统计（初稿）
             draft_scores = [
                 r.get('xcomet_draft', {}).get('score')
                 for r in results
                 if r.get('xcomet_draft') and r['xcomet_draft'].get('score') is not None
             ]
             if draft_scores:
-                print(
+                log_stats(
                     "[Stats] XCOMET Draft scores - "
                     f"Mean: {sum(draft_scores)/len(draft_scores):.4f}, "
-                    f"Min: {min(draft_scores):.4f}, Max: {max(draft_scores):.4f}"
+                    f"Min: {min(draft_scores):.4f}, Max: {max(draft_scores):.4f}",
+                    output_file=output_txt,
                 )
-            
+
             draft_error_span_counts = [
                 len(r.get('xcomet_draft', {}).get('error_spans', []))
                 for r in results
@@ -1619,8 +1338,11 @@ def main():
             ]
             if draft_error_span_counts:
                 avg_draft_spans = sum(draft_error_span_counts) / len(draft_error_span_counts)
-                print(f"[Stats] Avg. error spans per draft sample: {avg_draft_spans:.2f}")
-            
+                log_stats(
+                    f"[Stats] Avg. error spans per draft sample: {avg_draft_spans:.2f}",
+                    output_file=output_txt,
+                )
+
             # 终稿错误spans统计
             final_error_span_counts = [
                 len(r.get('xcomet_final', {}).get('error_spans', []))
@@ -1629,8 +1351,11 @@ def main():
             ]
             if final_error_span_counts:
                 avg_final_spans = sum(final_error_span_counts) / len(final_error_span_counts)
-                print(f"[Stats] Avg. error spans per final sample: {avg_final_spans:.2f}")
-            
+                log_stats(
+                    f"[Stats] Avg. error spans per final sample: {avg_final_spans:.2f}",
+                    output_file=output_txt,
+                )
+
             # XCOMET统计（终稿）
             final_scores = [
                 r.get('xcomet_final', {}).get('score')
@@ -1638,17 +1363,24 @@ def main():
                 if r.get('xcomet_final') and r['xcomet_final'].get('score') is not None
             ]
             if final_scores:
-                print(
+                log_stats(
                     "[Stats] XCOMET Final scores - "
                     f"Mean: {sum(final_scores)/len(final_scores):.4f}, "
-                    f"Min: {min(final_scores):.4f}, Max: {max(final_scores):.4f}"
+                    f"Min: {min(final_scores):.4f}, Max: {max(final_scores):.4f}",
+                    output_file=output_txt,
                 )
-            
-            # 改进统计
+
+            # 改进统计（注意：这里最好用 paired，而不是 zip 两个 list，
+            # 不过你目前 draft/final 是一一对应的也可以先这样用）
             if draft_scores and final_scores:
-                improved_count = sum(1 for d, f in zip(draft_scores, final_scores) if f and d and f > d)
-                print(f"[Stats] 终稿改进初稿的样本数: {improved_count}/{len(final_scores)} ({100*improved_count/len(final_scores):.1f}%)")
-    
+                improved_count = sum(
+                    1 for d, f in zip(draft_scores, final_scores) if f and d and f > d
+                )
+                log_stats(
+                    f"[Stats] 终稿改进初稿的样本数: {improved_count}/{len(final_scores)} "
+                    f"({100*improved_count/len(final_scores):.1f}%)",
+                    output_file=output_txt,
+                )
     print("\n" + "="*60)
     print("完成！")
     print("="*60)

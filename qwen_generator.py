@@ -344,9 +344,9 @@ class QwenGenerator:
         self,
         prompts: Union[str, List[str]],
         mode: str = "draft",
-        max_tokens: int = 1024,
-        temperature: float = 0.7,
-        top_p: float = 0.9,
+        max_tokens: int = 2048,
+        temperature: float = 0.2,
+        top_p: float = 0.95,
         **kwargs
     ) -> Union[str, List[str]]:
         """
@@ -534,7 +534,7 @@ class QwenGenerator:
         **generation_kwargs
     ) -> Union[str, List[str]]:
         """
-        从源文本直接生成翻译（自动构建prompt，使用base模板）
+        从源文本直接生成翻译（自动构建prompt，使用rl模板）
         
         Args:
             source_texts: 源文本（字符串或列表）
@@ -560,7 +560,7 @@ class QwenGenerator:
             src_lang_name = language_map.get(source_lang, source_lang.capitalize())
             tgt_lang_name = language_map.get(target_lang, target_lang.capitalize())
             
-            # 使用base模板构建prompt（draft mode复用base模板）
+            # 使用rl模板构建prompt（draft mode复用rl模板）
             example = {
                 'lg': lg,
                 'src_text': src,

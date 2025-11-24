@@ -583,7 +583,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
   2. Repair prompt 包含：
      - `User: {src_text}` - **完整原文**
      - `Draft Translation Segment: {draft_translation_segment}` - 初稿短句
-     - `Draft Source Segment: {ref_text}` - **完整参考翻译**
      - `Error Evaluation: {error_spans_json}` - 错误片段（JSON格式）
   3. 批量调用 Qwen 生成润色后的短句
   4. 提取润色短句的 `<translate>` 标签，失败则回退到初稿短句

@@ -6,10 +6,10 @@ SimultaneousTranslation主执行脚本
 1. 获取数据集（SimultaneousTranslation 的 data/test/used 下已生成的数据集）
 2. 转换数据集为parquet格式，并根据draft mode模板生成完整的prompt文本（包含instruction、格式说明和用户输入）
 3. 在外部加载XCOMET模型，方便后续评分环节直接调用
-4. 调用Qwen2.5-7B，使用步骤2生成的prompt，Mode=draft，生成并获取回答
+4. 调用Qwen2.5-3B，使用步骤2生成的prompt，Mode=draft，生成并获取回答
 5. 检查格式是否正确，如果格式正确，则抽取其中的<translate>部分，作为初稿，格式分数记为1；如果格式不正确，则不做更多操作，直接将格式分数记为0
 6. 对格式正确的翻译调用XCOMET，输出有错误的部分
-7. 再次调用Qwen2.5-7B，Mode=repair，prompt中包含：mode、原文、初稿和错误的span，让模型再次思考，获取回答
+7. 再次调用Qwen2.5-3B，Mode=repair，prompt中包含：mode、原文、初稿和错误的span，让模型再次思考，获取回答
 8. 检查repair生成回答格式是否正确，如果格式正确，则抽取其中的<translate>部分，作为终稿，复盘格式分数记为1；如果格式不正确，则不做更多操作，直接将复盘格式分数记为0
 """
 
@@ -141,7 +141,7 @@ def load_dataset_from_test_files(test_files: List[str], base_dir: str = None):
 
 def process_data_for_qwen(data: List[Dict], tokenizer_path: str, tokenizer=None, output_file: Optional[str] = None):
     """
-    将数据转换为Qwen2.5-7B可以处理的格式，并生成完整的prompt文本
+    将数据转换为Qwen2.5-3B可以处理的格式，并生成完整的prompt文本
     
     此函数不仅进行格式转换（JSONL -> Parquet），还会：
     1. 根据draft mode模板生成完整的prompt文本（包含instruction、格式说明和用户输入）
@@ -222,7 +222,7 @@ def main():
         help='（可选）要使用的数据集文件名，位于 data/test/used 下；'
              '如果不指定，将自动扫描 data/test/used 目录下所有 *.parquet / *.jsonl'
     )
-    parser.add_argument('--tokenizer_path', type=str, default='Qwen/Qwen2.5-7B-Instruct',
+    parser.add_argument('--tokenizer_path', type=str, default='Qwen/Qwen2.5-3B-Instruct',
                        help='Tokenizer路径或HuggingFace模型ID')
     parser.add_argument('--pipeline_mode', type=str, choices=['baseline', 'extended'], default='baseline',
                        help='处理流程模式：baseline或extended（短句级refinement）')
@@ -238,8 +238,8 @@ def main():
                        help='XCOMET使用的GPU编号，如"0,1"（默认：自动分配）')
     
     # Qwen模型相关参数
-    parser.add_argument('--qwen_model_path', type=str, default='Qwen/Qwen2.5-7B-Instruct',
-                       help='Qwen2.5-7B模型路径或HuggingFace模型ID')
+    parser.add_argument('--qwen_model_path', type=str, default='Qwen/Qwen2.5-3B-Instruct',
+                       help='Qwen2.5-3B模型路径或HuggingFace模型ID')
     parser.add_argument('--use_vllm', action='store_true', default=True,
                        help='是否使用vllm进行推理（推荐）')
     parser.add_argument('--no_use_vllm', dest='use_vllm', action='store_false',
@@ -483,9 +483,9 @@ def main():
     else:
         print("[XCOMET] Skipping XCOMET loading (--load_xcomet=False)")
         
-    # ========== 4. 调用Qwen2.5-7B生成draft翻译 ==========
+    # ========== 4. 调用Qwen2.5-3B生成draft翻译 ==========
     print("\n" + "="*60)
-    print("步骤4: 调用Qwen2.5-7B生成draft翻译")
+    print("步骤4: 调用Qwen2.5-3B生成draft翻译")
     print("="*60)
 
     print(f"[Qwen] Loading Qwen model from {args.qwen_model_path}...")
@@ -699,7 +699,7 @@ def main():
             else:
                 print("[XCOMET] 没有需要评分的初稿短句")
 
-            # 汇总所有短句的评分
+            # 汇总所有短句的评分，用于计算完整初稿的平均错误片段数量和初稿短句的平均XCOMET得分
             for idx in range(num_samples):
                 segment_results = results[idx].get("draft_segment_results", [])
                 if not segment_results:

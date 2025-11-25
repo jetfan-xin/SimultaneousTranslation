@@ -45,7 +45,7 @@ data/test/GuoFeng_Webnovel_Corpus/
 data/test/LITEVAL-CORPUS/
 data/test/RTT/
 results/*
-
+results_7B/
 # 输出结果文件（不提交到GitHub，文件太大）
 # *.json
 # 如果需要提交某些JSON文件，可以使用：git add -f <文件名>

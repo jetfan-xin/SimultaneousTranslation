@@ -9,3 +9,4 @@ vllm>=0.2.0  # 可选，如果可用则使用vllm进行更快的推理
 sentencepiece>=0.1.99
 protobuf>=3.20.0
 accelerate
+wtpsplit[onnx-gpu]

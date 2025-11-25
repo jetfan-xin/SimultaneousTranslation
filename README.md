@@ -1,25 +1,58 @@
 # SimultaneousTranslation
 
-基于MT_Grpo实现的同声传译项目，支持使用Qwen2.5-7B生成draft翻译，并使用XCOMET进行评分。
+以同声传译为灵感，增强LLM的翻译能力。使用 Qwen2.5-7B 生成初稿翻译，利用 XCOMET 识别错误片段，结合错误判断完善初稿，得到最终翻译。
 
-## 功能特性
+自动管理多卡 GPU 资源，支持整句与扩展（短句修复）两种模式。
 
-1. **数据集获取**：从MT_Grpo的data/train文件夹加载训练数据
-2. **数据转换和Prompt生成**：将JSONL数据转换为parquet格式，同时根据draft mode模板生成完整的prompt文本（包含instruction、格式说明和用户输入）
-3. **Parquet缓存**：自动保存处理后的数据到 `data/train/parquet` 目录（文件名与原始JSONL相同，扩展名改为.parquet），下次运行时会自动加载，避免重复转换
-4. **XCOMET模型加载**：在外部加载XCOMET-XL模型，复用MT_Grpo中的实现方式，输出句子得分与错误片段（含严重等级）
-   - 使用单GPU推理，避免多进程重复加载
-   - 支持CPU模式（`--xcomet_cpu`）
-5. **Qwen2.5-7B生成**：调用Qwen2.5-7B模型，使用draft mode，复用MT_Grpo中vllm的使用方式
-   - 支持vLLM和transformers两种后端
-   - 自动检测GPU类型并选择合适的dtype
-   - 配置与 `test_time/vllm_infer.py` 完全对齐
-6. **自动GPU选择**：自动检测所有可见GPU的内存状态，选择最充足的GPU
-   - 使用 `nvidia-smi` 获取准确的内存信息（包括其他进程占用的内存）
-   - 自动避开已被XCOMET占用的GPU
-   - 如果所有GPU内存都不足，自动降低 `gpu_memory_utilization`
-7. **扩展模式（可选）**：支持 `--pipeline_mode extended`，不切分原文，先对完整原文生成初稿，然后切分初稿翻译为短句，针对短句调用XCOMET获取错误片段（使用完整原文和完整参考翻译），并逐句修复后合并为终稿
-8. **阶段式处理**：将整个流程分为多个阶段，每个阶段独立运行，便于调试和监控
+
+## 流程总览
+1) **数据准备**：读取 `data/test/used` 下的 JSONL，或指定自定义文件；缺省转换为 Parquet 缓存。  
+2) **Draft 生成**：基于模板构造 prompt 调用 Qwen（vLLM/transformers）。  
+3) **格式校验**：提取 `<translate>` 作为初稿，记录格式分数。  
+4) **XCOMET 评分**：句子级打分并返回错误 span。  
+5) **Repair 生成**：携带原文 + 初稿 + 错误 span 进行二次生成，提取终稿。  
+6) **统计与日志**：保存结果与汇总统计到 `xcomet_all_stats.txt`。
+
+### Baseline vs Extended
+- **baseline**：整句生成 → 评分 → repair。  
+- **extended**：整段初稿 → 同传式切块 → 短句评分与修复 → 合并终稿 → 终稿再评。
+
+## 主要组件
+- `main.py`：流水线主控（数据加载、缓存、GPU 映射、分阶段执行、日志）。  
+- `data/process_data.py`：JSONL 读取、prompt 生成、Parquet 缓存。  
+- `qwen_generator.py`：Qwen2.5-7B 推理封装，vLLM/transformers 双后端，显存自适应。  
+- `xcomet_loader.py`：XCOMET-XL 加载与评分，支持 GPU/CPU、错误 span 输出。  
+- `utils.py`：`<translate>` 提取、错误 span 格式化、同传式切块等工具。  
+- `experiments/`：XCOMET 策略对比等实验脚本。  
+- `data/test/used/`：已整理的示例测试数据集。  
+- `run_all_flores.sh`、`test_3_extended_gpu.json`、`xcomet_all_stats.txt`：批量脚本与示例输出/汇总。
+
+## 目录结构
+```shell
+SimultaneousTranslation/
+├─ main.py # 流水线主控（数据加载、缓存、GPU 映射、分阶段执行、日志）。 
+├─ qwen_generator.py # Qwen2.5-7B-Instruct 推理封装，vLLM/transformers 双后端，显存自适应。
+├─ xcomet_loader.py # XCOMET-XL 加载与评分，支持 GPU/CPU、错误 span 输出。  
+├─ utils.py # `<translate>` 提取、错误 span 格式化、同传式切块等工具。
+├─ download_xcomet.py # 下载 XCOMET-XL 模型
+├─ run_all.sh # 批量脚本：测试所有数据集
+├─ test_3_extended_gpu.json # 输出示例：扩展模式
+├─ xcomet_all_stats.txt # 记录测试时XCOMET的统计信息
+├─ data/
+│  ├─ process_data.py # JSONL 读取、初稿 prompt 生成并保存为Parquet。
+│  └─ test/
+│     ├─ used/
+│     │  ├─ culturemt_en-fr.jsonl
+│     │  └─ ...（其他测试集 jsonl）
+│     ├─ build_flores101_pairs.py # 预处理flores101原始数据集，创建所需语言对数据
+│     ├─ unify_test_data.py # 预处理原始测试数据集，输出规范化的所需测试数据到data/test/used/
+│     ├─ metrics.py # 在测试得到的翻译上计算BLEU、COMET、COMETkiwi指标merge.py
+│     └─ merge.py # 汇总每个数据集上的平均指标值
+├─ experiments/
+│  └─ xcomet_compare_strategies.py # 不同策略下 XCOMET 输出对比实验。  
+└─ results/ ... # 测试和指标计算结果文件
+```
+
 
 ## 安装依赖
 
@@ -61,24 +94,8 @@ cd /ltstorage/home/4xin/SimultaneousTranslation
 pip install -r requirements.txt
 ```
 
-注意：`requirements.txt`中包含vllm，如果GPU不可用或不想安装vllm，可以手动安装其他依赖：
+注意：`requirements.txt`中包含vllm，如果GPU不可用或不想安装vllm，可以跳过vllm并安装其他依赖。
 
-```bash
-pip install transformers>=4.35.0
-pip install datasets>=2.14.0
-pip install pandas>=1.5.0
-pip install tqdm>=4.65.0
-pip install huggingface-hub>=0.17.0
-pip install unbabel-comet>=2.0.0
-pip install sentencepiece>=0.1.99
-pip install protobuf>=3.20.0
-```
-
-#### 5. 安装vllm（可选，推荐用于GPU加速）
-
-```bash
-pip install vllm
-```
 
 ### 验证安装
 
@@ -107,44 +124,17 @@ python -c "import vllm; print(f'vLLM版本: {vllm.__version__}')"
   - unbabel-comet >= 2.0.0 (用于XCOMET)
   - vllm >= 0.2.0 (可选，用于加速推理)
 
-### 常见问题
 
-#### 1. vllm安装失败
 
-如果vllm安装失败，不用担心，程序会自动回退到transformers后端。vllm主要用于加速推理，不是必需的。
+## 使用步骤
 
-#### 2. CUDA版本不匹配
-
-如果PyTorch的CUDA版本与系统CUDA版本不匹配，可能会导致问题。检查CUDA版本：
-
-```bash
-nvidia-smi
-```
-
-然后安装对应版本的PyTorch。
-
-#### 3. 内存不足
-
-如果GPU内存不足（<16GB），可以考虑：
-- 不使用vllm（使用transformers后端）
-- 减小batch_size
-- 使用量化模型
-
-#### 4. 激活环境
+### 0. 激活环境
 
 每次使用前需要激活环境：
 
 ```bash
 conda activate ST
 ```
-
-或者添加到.bashrc：
-
-```bash
-echo "conda activate ST" >> ~/.bashrc
-```
-
-## 使用步骤
 
 ### 1. 下载XCOMET模型（可选）
 
@@ -174,20 +164,44 @@ export WORD_QE_CKPT=~/models/XCOMET-XL/checkpoints/model.ckpt
 ```bash
 python main.py \
     --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-    --xcomet_cpu \
-    --qwen_cpu \
-    --num_samples 5 \
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
+    --test_files wmt23_zh-en.jsonl \
+    --num_samples 5 \ # 只测试前5个数据
     --output_file test_5_baseline_cpu.json
 ```
+
+#### GPU上运行：
+
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
+    --data_dir data \
+    --test_files wmt23_zh-en.jsonl \
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
+    --num_samples 5 \ # 只测试前5个数据
+    --output_file test_5_baseline_gpu.json
+```
+
+**说明**：
+- 只设置 `CUDA_VISIBLE_DEVICES` 时，Qwen 和 XCOMET 都会使用这些 GPU（共享）
+- 也可以分别指定 XCOMET 和 Qwen 使用的 GPU 物理序号(推荐，防止使用相同 GPU 导致 OOM)
+  ```bash
+  CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
+    --data_dir data \
+    --test_files wmt23_zh-en.jsonl \
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
+    --xcomet_gpus 0,1 \
+    --qwen_gpus 2,4 \
+    --num_samples 5 \ # 只测试前5个数据
+    --output_file test_5_baseline_gpu.json
+  ```
+- 默认使用 GPU 模式（如果 GPU 可用）
 
 **输出结果示例**：
 ```
 ============================================================
 步骤5: 保存结果
 ============================================================
-[Output] Results saved to test_5_baseline_cpu.json
+[Output] Results saved to test_5_baseline_gpu.json
 [Stats] Draft格式正确率: 5/5 (100.0%)
 [Stats] Repair格式正确率: 5/5 (100.0%)
 [Stats] XCOMET Draft scores - Mean: 0.8251, Min: 0.6145, Max: 0.9898
@@ -206,36 +220,6 @@ python main.py \
 - **XCOMET Final scores**：终稿翻译的XCOMET质量得分
 - **终稿改进初稿的样本数**：终稿XCOMET得分高于初稿的样本数量（说明repair有效）
 
-#### GPU上运行：
-
-```bash
-CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-    --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-    --num_samples 5 \
-    --output_file test_5_baseline_gpu.json
-```
-
-**说明**：
-- 只设置 `CUDA_VISIBLE_DEVICES` 时，Qwen 和 XCOMET 都会使用这些 GPU（共享）
-- 默认使用 GPU 模式（如果 GPU 可用）
-- 可以顺利跑通少量数据
-
-**输出结果示例**：
-```
-============================================================
-步骤5: 保存结果
-============================================================
-[Output] Results saved to test_5_baseline_gpu.json
-[Stats] Draft格式正确率: 5/5 (100.0%)
-[Stats] Repair格式正确率: 5/5 (100.0%)
-[Stats] XCOMET Draft scores - Mean: 0.8251, Min: 0.6145, Max: 0.9898
-[Stats] Avg. error spans per draft sample: 2.80
-[Stats] Avg. error spans per final sample: 2.80
-[Stats] XCOMET Final scores - Mean: 0.8547, Min: 0.6833, Max: 0.9875
-[Stats] 终稿改进初稿的样本数: 2/5 (40.0%)
-```
 
 ---
 
@@ -248,11 +232,13 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
     --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
+    --test_files wmt23_zh-en.jsonl \
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
+    --xcomet_gpus 0,1 \
+    --qwen_gpus 2,4 \
     --pipeline_mode extended \
-    --num_samples 3 \
-    --output_file test_5_extended_gpu.json
+    --num_samples 3 \ # 只测试前3个数据
+    --output_file test_3_extended_gpu.json
 ```
 
 **说明**：
@@ -298,7 +284,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 
 **优先级（从高到低）**：
 1. `--qwen_cpu` / `--xcomet_cpu`：强制CPU模式
-2. `--qwen_gpus` / `--xcomet_gpus`：分别指定GPU
+2. `--qwen_gpus` / `--xcomet_gpus`：分别指定GPU（推荐）
 3. `CUDA_VISIBLE_DEVICES` 环境变量：共享GPU（如果未分别指定）
 4. 默认：CPU模式
 
@@ -308,99 +294,40 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
     --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-    --num_samples 5 \
+    --test_files wmt23_zh-en.jsonl \
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
+    --num_samples 5 \ # 只测试前5个数据
     --output_file test_shared.json
 ```
 → Qwen 和 XCOMET 都使用 GPU 0,1,2,4
 
-2. **分别指定GPU**：
+2. **分别指定GPU**：推荐
 ```bash
-python main.py \
+CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
     --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
+    --test_files wmt23_zh-en.jsonl \
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --xcomet_gpus 0,1 \
-    --qwen_gpus 2,3,4 \
-    --num_samples 5 \
+    --qwen_gpus 2,4 \
+    --num_samples 5 \ # 只测试前5个数据
     --output_file test_separate.json
 ```
 → XCOMET 使用 GPU 0,1，Qwen 使用 GPU 2,3,4
 
 3. **混合模式**（XCOMET用CPU，Qwen用GPU）：
 ```bash
-python main.py \
+CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
     --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
+    --test_files wmt23_zh-en.jsonl \
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --xcomet_cpu \
-    --qwen_gpus 0,1,2,3 \
-    --num_samples 5 \
+    --qwen_gpus 0,1,2,4 \
+    --num_samples 5 \ # 只测试前5个数据
     --output_file test_mixed.json
 ```
-→ XCOMET 使用 CPU，Qwen 使用 GPU 0,1,2,3
+→ XCOMET 使用 CPU，Qwen 使用 GPU 0,1,2,4
 
-### 其他用法示例
 
-#### 手动指定GPU（分别指定）：
-
-```bash
-# XCOMET使用GPU 0，Qwen使用GPU 1
-CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py \
-    --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-    --xcomet_gpus 0 \
-    --qwen_gpus 1 \
-    --pipeline_mode baseline \
-    --output_file results.json \
-    --num_samples 10
-```
-
-#### 如果遇到XCOMET的CUDA错误，可以使用CPU模式：
-
-```bash
-python main.py \
-    --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-    --xcomet_cpu \
-    --qwen_gpus 0 \
-    --pipeline_mode baseline \
-    --output_file results.json \
-    --num_samples 10
-```
-
-#### 如果GPU内存不足，降低gpu_memory_utilization：
-
-```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py \
-    --data_dir data \
-    --train_files train/json/train_enzh_6565.jsonl \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-    --xcomet_gpus 0 \
-    --qwen_gpus 1 \
-    --gpu_memory_utilization 0.6 \
-    --pipeline_mode baseline \
-    --output_file results.json \
-    --num_samples 10
-```
-
-#### 从results.json读取数据进行refinement：
-
-如果需要从已有的results.json文件读取draft结果并进行refinement：
-
-```bash
-CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py \
-    --input_results_file results.json \
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-    --xcomet_gpus 0,1 \
-    --qwen_gpus 2,3 \
-    --gpu_memory_utilization 0.7 \
-    --output_file results_refined.json \
-    --use_vllm
-```
 
 #### 完整参数说明：
 
@@ -408,10 +335,10 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python main.py \
 # 指定使用GPU设备（根据实际需求调整）
 CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
     --data_dir data \                          # 数据目录
-    --train_files train/json/xxx.jsonl \      # 训练文件（相对data_dir，可指定多个）
+    --test_files xxx.jsonl \      # 测试文件，默认位于 data/test/used 下
     --tokenizer_path Qwen/Qwen2.5-7B-Instruct \  # Tokenizer路径（默认：Qwen/Qwen2.5-7B-Instruct）
     --qwen_model_path Qwen/Qwen2.5-7B-Instruct \ # Qwen模型路径（默认：Qwen/Qwen2.5-7B-Instruct）
-    --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \  # XCOMET checkpoint（必需）
+    --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \  # XCOMET checkpoint（必需）
     --use_vllm \                                # 使用vllm（推荐，更快，默认：True）
     --max_tokens 2048 \                         # 最大生成token数（默认：2048，与test_time对齐）
     --temperature 0.2 \                         # 采样温度（默认：0.2，与test_time对齐）
@@ -420,13 +347,11 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
     --gpu_memory_utilization 0.85 \            # GPU内存使用率（默认：0.85，与test_time对齐）
     --num_samples 100 \                         # 处理的样本数量（默认：全部）
     --pipeline_mode baseline \                  # 流程模式：baseline（整句）或extended（短句修复）
-    --xcomet_gpus 0 \                           # XCOMET使用的GPU（可选，默认CPU）
-    --qwen_gpus 1 \                             # Qwen使用的GPU（可选，默认CPU）
+    --xcomet_gpus 0,1 \                           # XCOMET使用的GPU的物理序号（可选，默认CPU）
+    --qwen_gpus 2,3 \                             # Qwen使用的GPU的物理序号（可选，默认CPU）
     --xcomet_cpu \                              # 强制XCOMET使用CPU（可选）
     --qwen_cpu \                                # 强制Qwen使用CPU（可选）
-    --input_results_file results.json \         # 输入results.json文件（用于refinement）
     --output_file results.json                  # 输出文件（必需）
-    # 注意：parquet文件会自动保存到 data/train/parquet 目录，无需手动指定
 ```
 
 **重要参数说明**：
@@ -723,14 +648,14 @@ segments = split_into_segments(text)
 #  '比如这一句，如果太长，就可以在合适的逗号后面切开，而不是只在句号处切分。']
 
 # 自定义长度限制
-segments = split_into_segments(text, max_len=30, hard_max_len=60)
+segments = split_into_segments(text, max_len=100, hard_max_len=150)
 ```
 
 ### 参数说明
 
 - `text` (str): 待切分的文本
-- `max_len` (int, 默认40): 理想短句长度（字符数）
-- `hard_max_len` (int, 默认80): 绝对最大长度，超过则强制切分
+- `max_len` (int, 默100): 理想短句长度（字符数）
+- `hard_max_len` (int, 默认150): 绝对最大长度，超过则强制切分
 
 ## 数据格式
 
@@ -768,50 +693,6 @@ segments = split_into_segments(text, max_len=30, hard_max_len=60)
 }
 ```
 
-## 项目结构
-
-```
-SimultaneousTranslation/
-├── data/                        # 数据目录
-│   ├── process_data.py         # 数据预处理脚本（支持draft mode，复用base模板）
-│   └── train/                  # 训练数据
-│       ├── json/              # JSONL原始数据文件
-│       │   ├── train_enzh_6565.jsonl
-│       │   └── train_zhen_6565.jsonl
-│       └── parquet/           # 转换后的parquet缓存文件（自动生成）
-│           ├── train_enzh_6565.parquet
-│           └── train_zhen_6565.parquet
-├── main.py                     # 主执行脚本（必需）
-├── qwen_generator.py           # Qwen2.5-7B生成器（必需）
-├── xcomet_loader.py            # XCOMET模型加载器（必需）
-├── utils.py                    # 工具函数（格式检查、短句切分等，必需）
-├── download_xcomet.py          # XCOMET模型下载脚本（可选）
-├── requirements.txt            # Python依赖列表（必需）
-├── README.md                   # 项目文档（必需）
-├── .gitignore                  # Git忽略文件（GitHub上传时排除不需要的文件）
-└── *.json                      # 测试输出文件
-```
-
-### 核心文件说明
-
-**必需文件**（项目运行必需）：
-- `main.py` - 主执行脚本
-- `qwen_generator.py` - Qwen模型生成器
-- `xcomet_loader.py` - XCOMET评分器
-- `utils.py` - 工具函数（格式检查、短句切分）
-- `data/process_data.py` - 数据预处理
-- `requirements.txt` - 依赖列表
-- `README.md` - 项目文档
-
-**可选文件**（辅助工具）：
-- `download_xcomet.py` - 下载XCOMET模型
-
-**自动生成的文件/目录**：
-- `data/train/parquet/` - Parquet缓存文件（自动生成）
-- `data/test/parquet/` - 测试Parquet缓存（自动生成）
-- `__pycache__/` - Python缓存目录（可删除）
-- `*.json` - 输出结果文件（可删除，用于测试）
-
 
 ## 注意事项
 
@@ -820,34 +701,7 @@ SimultaneousTranslation/
    **默认行为**：
    - 默认使用 CPU 模式（不设置任何GPU参数时）
    - 如果只设置了 `CUDA_VISIBLE_DEVICES` 环境变量，Qwen 和 XCOMET 都会使用这些 GPU（共享）
-   
-   **共享GPU（推荐，简单）**：
-   ```bash
-   # Qwen 和 XCOMET 都使用 GPU 0,1,2,4
-   CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-       --data_dir data \
-       --train_files train/json/train_enzh_6565.jsonl \
-       --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-       --output_file results.json
-   ```
-   
-   **分别指定GPU**：
-   ```bash
-   # XCOMET使用GPU 0，Qwen使用GPU 1
-   python main.py \
-       --data_dir data \
-       --train_files train/json/train_enzh_6565.jsonl \
-       --xcomet_ckpt ~/models/XCOMET-XL/checkpoints/model.ckpt \
-       --xcomet_gpus 0 \
-       --qwen_gpus 1 \
-       --output_file results.json
-   ```
-   
-   **GPU选择优先级**：
-   - `--qwen_cpu` / `--xcomet_cpu`：强制CPU模式（最高优先级）
-   - `--qwen_gpus` / `--xcomet_gpus`：分别指定GPU
-   - `CUDA_VISIBLE_DEVICES` 环境变量：共享GPU（如果未分别指定）
-   - 默认：CPU模式
+   - 推荐使用分别指定GPU，其次共享GPU。
 
 2. **GPU内存管理**：
    - `--gpu_memory_utilization`：vLLM的GPU内存使用率（0.0-1.0），默认0.85（与test_time对齐）
@@ -880,15 +734,13 @@ SimultaneousTranslation/
 
 7. **数据路径**：确保data目录下包含train/json/文件夹和相应的JSONL文件。
 
-8. **Parquet缓存**：程序会自动将处理后的数据保存为parquet格式到 `data/train/parquet` 目录，文件名与原始JSONL文件相同（扩展名改为.parquet）。下次运行时会自动加载，跳过数据转换步骤。
+8. **Parquet缓存**：程序会自动将处理后的数据保存为parquet格式到相同目录，文件名与原始JSONL文件相同（扩展名改为.parquet）。下次运行时会自动加载，跳过数据转换步骤。
 
 9. **Draft模式**：draft mode的prompt直接复用base模板，无需额外配置。
 
 10. **CPU模式警告**：如果在CPU上运行，推理会非常慢。强烈建议使用GPU。如果必须使用CPU，请减少 `max_tokens` 和 `num_samples`。
 
-11. **从results.json读取数据**：使用 `--input_results_file` 参数可以从已有的results.json文件读取draft结果，然后进行refinement处理。这对于只需要对已有结果进行refinement的场景很有用。
-
-12. **GPU类型自动检测**：
+11. **GPU类型自动检测**：
     - 程序会自动检测GPU类型并选择合适的dtype
     - RTX A6000（compute capability 8.6）：自动使用 `float16`（避免bfloat16数值问题）
     - A100/H100（compute capability >= 9.0）：自动使用 `bfloat16`
@@ -932,4 +784,3 @@ kill -9 <PID>
 - vllm调用：`MT_Grpo/verl/verl/workers/rollout/vllm_rollout/vllm_rollout.py`
 - 模型下载：`MT_Grpo/scripts/download_comet_ckpts.py`
 - vLLM配置：`SimultaneousTranslation/test_time/vllm_infer.py`
-

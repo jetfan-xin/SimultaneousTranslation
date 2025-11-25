@@ -56,6 +56,12 @@ def parse_info_from_filename(filename: str):
     # CultureMT
     elif "culturemt" in name:
         dataset = "culturemt"
+    # wmt
+    elif "wmt24" in name:
+        dataset = "wmt24"
+
+    elif "wmt23" in name:
+        dataset = "wmt23"
 
     # ---------- 3. method ----------
     # 约定：文件名形如 test_baseline_xxx_total2.csv
@@ -66,7 +72,7 @@ def parse_info_from_filename(filename: str):
     return dataset, subset, lang_pair, method
 
 
-for f in ROOT.rglob("*_total2.csv"):
+for f in ROOT.rglob("*_total.csv"):
     df = pd.read_csv(f)
 
     dataset, subset, lang_pair, method = parse_info_from_filename(f.name)

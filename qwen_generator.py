@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Qwen2.5-7B模型调用模块
+Qwen2.5-3B模型调用模块
 复用MT_Grpo中vllm的使用方式
 """
 
@@ -29,11 +29,11 @@ except Exception as e:
     print("[Warning] Will use transformers backend instead")
 
 class QwenGenerator:
-    """Qwen2.5-7B模型生成器，支持draft mode"""
+    """Qwen2.5-3B模型生成器，支持draft mode"""
     
     def __init__(
         self,
-        model_path: str = "Qwen/Qwen2.5-7B-Instruct",
+        model_path: str = "Qwen/Qwen2.5-3B-Instruct",
         use_vllm: bool = True,
         device: Optional[str] = None,
         gpu_memory_utilization: float = 0.85,  # test_time: 0.85
@@ -303,33 +303,22 @@ class QwenGenerator:
             self.use_vllm = False
         
         if not self.use_vllm:
-            # 使用transformers进行推理
+            # 使用transformers进行推理（只用单卡，不再自动多卡）
             print(f"[Qwen] Loading model with transformers on {self.device}...")
             if self.device.startswith("cuda"):
-                # GPU模式：使用device_map="auto"自动分配到所有可用GPU
+                # 单卡 GPU：显式加载到当前 device，不用 device_map="auto"
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_path,
                     torch_dtype=torch.float16,
-                    device_map="auto",  # 自动分配到所有可用GPU
+                    device_map=None,          # 不启用自动多卡切分
                     trust_remote_code=True,
                 )
-                # 验证模型实际使用的GPU
-                device_set = set()
-                for name, param in self.model.named_parameters():
-                    if param.device.type == "cuda":
-                        device_set.add(str(param.device))
-                if device_set:
-                    devices_str = ", ".join(sorted(device_set))
-                    print(f"[Qwen] Model loaded with transformers on GPU(s): {devices_str}")
-                    if len(device_set) == 1:
-                        print(f"[Qwen] Warning: 只使用了单GPU，推理会很慢。建议：")
-                        print(f"[Qwen]   1. 使用 vLLM（更快，但需要更多GPU内存）")
-                        print(f"[Qwen]   2. 或者减少 gpu_memory_utilization 让 vLLM 成功加载")
-                        print(f"[Qwen]   3. 或者使用更少的 GPU（如 --qwen_gpus 0,1）")
-                else:
-                    print(f"[Qwen] Warning: 模型未加载到GPU上，将使用CPU（非常慢）")
+                # 移到指定 GPU（通常是 cuda 或 cuda:0）
+                self.model.to(self.device)
+
+                print(f"[Qwen] Model loaded with transformers on {self.device}")
             else:
-                # CPU模式
+                # CPU 模式
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_path,
                     torch_dtype=torch.float32,
@@ -338,6 +327,7 @@ class QwenGenerator:
                 )
                 self.model = self.model.to(self.device)
                 print(f"[Qwen] Model loaded with transformers on {self.device}")
+
             self.model.eval()
     
     def generate_draft(

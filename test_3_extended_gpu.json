@@ -1,274 +1,300 @@
 [
   {
     "index": 0,
-    "data_source": "train",
-    "lang_pair": "en-zh",
-    "src_text": "28-Year-Old Chef Found Dead at San Francisco Mall",
-    "tgt_text": "28岁厨师被发现死于旧金山一家商场",
-    "draft_prompt": "A conversation between User and Assistant. The User asks for a translation from English to Chinese, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the user with the final translation. The reasoning process and final translation are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> final translation here </translate>. \n\nUser:28-Year-Old Chef Found Dead at San Francisco Mall\nAssistant:",
-    "draft_generated_text": " <think>这句话是关于一名28岁厨师在旧金山购物中心被发现死亡的消息。需要翻译成中文，保持原意不变。\"28-Year-Old\"可以翻译为\"28岁的\"，\"Chef\"是\"厨师\"，\"Found Dead\"可以翻译为\"被发现死亡\"，\"San Francisco Mall\"可以翻译为\"旧金山购物中心\"。 </think> <translate> 28岁的厨师在旧金山购物中心被发现死亡 </translate>",
+    "data_source": "test_wmt23",
+    "lang_pair": "zh-en",
+    "src_text": "本文件按照 GB/T 1.1 一 202 久标准化工作导则第工部分:标准化文件的结构和起草规则的规定起惠。",
+    "tgt_text": "The rules in GB/T 1.1-202 are the establishment for this record, rules for Long-Term Standardization Work Segment II: Guidelines Record Structure and Composing Rules.",
+    "draft_prompt": "A conversation between User and Assistant. The User asks for a translation from Chinese to English, and the Assistant translates it. The final translation are enclosed within <translate> </translate> tags, i.e., <translate> final translation here </translate>. \n\nUser:本文件按照 GB/T 1.1 一 202 久标准化工作导则第工部分:标准化文件的结构和起草规则的规定起惠。\nAssistant:",
+    "draft_generated_text": "<translate>This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1: Structure and drafting rules for standard documents.</translate>",
     "draft_format_score": 1,
-    "draft_translation": "28岁的厨师在旧金山购物中心被发现死亡",
+    "draft_translation": "This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1: Structure and drafting rules for standard documents.",
     "draft_segments": [
-      "28岁的厨师在旧金山购物中心被发现死亡"
+      "This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1:",
+      "Structure and drafting rules for standard documents."
     ],
     "draft_segment_results": [
       {
-        "score": 0.9874705076217651,
+        "score": 0.5310264825820923,
         "error_spans": [
           {
-            "text": "购物中心",
-            "confidence": 0.41618138551712036,
-            "severity": "minor",
-            "start": 10,
-            "end": 14
+            "text": "-2020 Guide for Standardization Work - Part 1:",
+            "confidence": 0.3863052427768707,
+            "severity": "major",
+            "start": 57,
+            "end": 103
           }
         ],
-        "system_score": 0.7593656107783318
+        "system_score": 0.4922846078872681
+      },
+      {
+        "score": 0.31438106298446655,
+        "error_spans": [],
+        "system_score": 0.4922846078872681
       }
     ],
     "xcomet_draft": {
-      "score": 0.9874705076217651,
+      "score": 0.4227037727832794,
       "error_spans": [
         {
-          "text": "购物中心",
-          "confidence": 0.41618138551712036,
-          "severity": "minor",
-          "start": 10,
-          "end": 14
+          "text": "-2020 Guide for Standardization Work - Part 1:",
+          "confidence": 0.3863052427768707,
+          "severity": "major",
+          "start": 57,
+          "end": 103
         }
       ]
     },
     "repair_segment_outputs": [
-      " <think> 在这个翻译中，“购物中心”这个词的翻译是正确的，但是“被发现死亡”这个表达方式在中文里可能不太自然。更常见的表达方式是“被发现身亡”或“被发现去世”。考虑到原文中“死于”的使用，这里可以更准确地翻译为“死于”。因此，可以将“被发现死亡”改为“被发现去世”。 </think>\n<translate> 28岁的厨师死于旧金山一家购物中心 </translate>"
+      "<think> 首先，需要纠正文本中的错误，确保它遵循正确的格式。GB/T 1.1-2020 应该是 GB/T 1.1-2020，而不是带有“-2020”的部分标题。此外，原文段落描述了文件的标准化工作依据，因此翻译时应保持这种结构。所以，正确的翻译应该是：本文件按照 GB/T 1.1-2020 标准化工作导则第 1 部分:标准化文件的结构和起草规则的规定进行编写。 </think>\n<translate> This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1: Structure and drafting rules for standard documents. </translate>",
+      null
     ],
     "final_segments": [
-      "28岁的厨师死于旧金山一家购物中心"
+      "This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1: Structure and drafting rules for standard documents.",
+      "Structure and drafting rules for standard documents."
     ],
     "repair_segment_prompts": [
-      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from English to Chinese. The draft translation segment is part of a translation for a source text segment. The Assistant needs to polish this draft translation segment based on the source text segment, the draft translation segment, the original source text segment that the draft was translated from, and error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: 28-Year-Old Chef Found Dead at San Francisco Mall\nDraft Translation Segment: 28岁的厨师在旧金山购物中心被发现死亡\nDraft Source Segment: 28岁厨师被发现死于旧金山一家商场\nError Evaluation: [\n  {\n    \"text\": \"购物中心\",\n    \"severity\": \"minor\"\n  }\n]\nAssistant:"
+      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from Chinese to English. The draft translation segment is part of a translation for a source text. The Assistant needs to polish this draft translation segment based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: 本文件按照 GB/T 1.1 一 202 久标准化工作导则第工部分:标准化文件的结构和起草规则的规定起惠。\nDraft Translation Segment: This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1:\nError Evaluation: [\n  {\n    \"text\": \"-2020 Guide for Standardization Work - Part 1:\",\n    \"severity\": \"major\"\n  }\n]\nAssistant:",
+      null
     ],
     "repair_segment_format_scores": [
-      1
+      1,
+      0
     ],
-    "final_translation": "28岁的厨师死于旧金山一家购物中心",
-    "repair_format_score": 1,
-    "repair_generated_text": " <think> 在这个翻译中，“购物中心”这个词的翻译是正确的，但是“被发现死亡”这个表达方式在中文里可能不太自然。更常见的表达方式是“被发现身亡”或“被发现去世”。考虑到原文中“死于”的使用，这里可以更准确地翻译为“死于”。因此，可以将“被发现死亡”改为“被发现去世”。 </think>\n<translate> 28岁的厨师死于旧金山一家购物中心 </translate>",
+    "final_translation": "This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1: Structure and drafting rules for standard documents. Structure and drafting rules for standard documents.",
+    "repair_format_score": 0,
+    "repair_generated_text": "<think> 首先，需要纠正文本中的错误，确保它遵循正确的格式。GB/T 1.1-2020 应该是 GB/T 1.1-2020，而不是带有“-2020”的部分标题。此外，原文段落描述了文件的标准化工作依据，因此翻译时应保持这种结构。所以，正确的翻译应该是：本文件按照 GB/T 1.1-2020 标准化工作导则第 1 部分:标准化文件的结构和起草规则的规定进行编写。 </think>\n<translate> This document is prepared in accordance with the GB/T 1.1-2020 Guide for Standardization Work - Part 1: Structure and drafting rules for standard documents. </translate>",
     "xcomet_final": {
-      "score": 0.9880166053771973,
-      "error_spans": [],
-      "system_score": 0.8997125029563904
+      "score": 0.5421240329742432,
+      "error_spans": [
+        {
+          "text": "in",
+          "confidence": 0.4038889408111572,
+          "severity": "major",
+          "start": 25,
+          "end": 28
+        },
+        {
+          "text": "1.1-2020 Guide for Standardization Work - Part 1: Structure and drafting rules for standard documents. Structure and drafting rules for standard documents.",
+          "confidence": 0.5064067840576172,
+          "severity": "major",
+          "start": 53,
+          "end": 209
+        }
+      ],
+      "system_score": 0.6509050130844116
     }
   },
   {
     "index": 1,
-    "data_source": "train",
-    "lang_pair": "en-zh",
-    "src_text": "But the victim's brother says he can't think of anyone who would want to hurt him, saying, \"Things were finally going well for him.\"",
-    "tgt_text": "但受害人的哥哥表示想不出有谁会想要加害于他，并称“一切终于好起来了。”",
-    "draft_prompt": "A conversation between User and Assistant. The User asks for a translation from English to Chinese, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the user with the final translation. The reasoning process and final translation are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> final translation here </translate>. \n\nUser:But the victim's brother says he can't think of anyone who would want to hurt him, saying, \"Things were finally going well for him.\"\nAssistant:",
-    "draft_generated_text": " <think> 在翻译这句话时，我们需要保持原句的意思和语气。原句中的“victim's brother”是受害者兄弟，“can't think of anyone who would want to hurt him”表示他想不出有人会想伤害他，“Things were finally going well for him”表示他生活终于好转了。我们需要把这些信息准确地翻译成中文。</think> \n<translate> 但受害者的哥哥说，他想不出有人会想伤害他，并说：“他终于过上了好日子。”</translate>",
+    "data_source": "test_wmt23",
+    "lang_pair": "zh-en",
+    "src_text": "本文件代替 GB 18030 一 2005 信息技术 ”中文编码字符集与 GB 18030 一 2005 相比,除结构调整和编辑性改动外,主要扩术变化如下:",
+    "tgt_text": "This record upgrades the Chinese coded character set for \"Data Innovation\" in GB 18030-2005, with the special case of auxiliary adjustments and publication modifications, the vital specialized changes from GB 18030-2005 are as takes after:",
+    "draft_prompt": "A conversation between User and Assistant. The User asks for a translation from Chinese to English, and the Assistant translates it. The final translation are enclosed within <translate> </translate> tags, i.e., <translate> final translation here </translate>. \n\nUser:本文件代替 GB 18030 一 2005 信息技术 ”中文编码字符集与 GB 18030 一 2005 相比,除结构调整和编辑性改动外,主要扩术变化如下:\nAssistant:",
+    "draft_generated_text": "<translate>This document replaces GB 18030-2005, Information Technology - Chinese Character Coding Scheme, with the following main technical changes compared to GB 18030-2005, apart from structural adjustments and editorial modifications:</translate>",
     "draft_format_score": 1,
-    "draft_translation": "但受害者的哥哥说，他想不出有人会想伤害他，并说：“他终于过上了好日子。”",
+    "draft_translation": "This document replaces GB 18030-2005, Information Technology - Chinese Character Coding Scheme, with the following main technical changes compared to GB 18030-2005, apart from structural adjustments and editorial modifications:",
     "draft_segments": [
-      "但受害者的哥哥说，他想不出有人会想伤害他，并说：“他终于过上了好日子。",
-      "”"
+      "This document replaces GB 18030-2005, Information Technology - Chinese Character Coding Scheme, with the following main technical changes compared to",
+      "GB 18030-2005, apart from structural adjustments and editorial modifications:"
     ],
     "draft_segment_results": [
       {
-        "score": 0.8728629350662231,
+        "score": 0.6125055551528931,
         "error_spans": [
           {
-            "text": ":“他终于过上了好日子",
-            "confidence": 0.48842889070510864,
+            "text": "30-2005, Information Technology - Chinese Character Coding Scheme",
+            "confidence": 0.46974360942840576,
             "severity": "major",
-            "start": 23,
-            "end": 34
+            "start": 29,
+            "end": 94
           }
         ],
-        "system_score": 0.7593656107783318
+        "system_score": 0.4922846078872681
       },
       {
-        "score": 0.49851152300834656,
-        "error_spans": [],
-        "system_score": 0.7593656107783318
+        "score": 0.25500375032424927,
+        "error_spans": [
+          {
+            "text": "GB 18030-2005, apart from structural",
+            "confidence": 0.528840959072113,
+            "severity": "critical",
+            "start": 0,
+            "end": 36
+          },
+          {
+            "text": "ments",
+            "confidence": 0.30884432792663574,
+            "severity": "major",
+            "start": 43,
+            "end": 48
+          }
+        ],
+        "system_score": 0.4922846078872681
       }
     ],
     "xcomet_draft": {
-      "score": 0.6856872290372849,
+      "score": 0.43375465273857117,
       "error_spans": [
         {
-          "text": ":“他终于过上了好日子",
-          "confidence": 0.48842889070510864,
+          "text": "30-2005, Information Technology - Chinese Character Coding Scheme",
+          "confidence": 0.46974360942840576,
           "severity": "major",
-          "start": 23,
-          "end": 34
+          "start": 29,
+          "end": 94
+        },
+        {
+          "text": "GB 18030-2005, apart from structural",
+          "confidence": 0.528840959072113,
+          "severity": "critical",
+          "start": 0,
+          "end": 36
+        },
+        {
+          "text": "ments",
+          "confidence": 0.30884432792663574,
+          "severity": "major",
+          "start": 43,
+          "end": 48
         }
       ]
     },
     "repair_segment_outputs": [
-      " <think> The draft translation segment has a few issues. The first issue is the word order, which is not natural in Chinese. \"他终于过上了好日子\" should be placed after the quote to maintain the flow of the sentence. Additionally, the phrase \"加害于他\" is more appropriate than \"想要伤害他\" in this context. \"想要伤害他\" implies a desire to harm, which might not be the exact meaning intended. \"加害于他\" means to harm him, which is more fitting for the context of a victim's brother. </think> <translate> 但受害者的哥哥表示，想不出有谁会加害于他，并说：“一切终于好起来了。” </translate>",
-      " <think> 在这个翻译段落中，源文本和翻译文本之间的信息是一致的，但可以进一步优化以提高流畅性和自然度。原句中的“加害于他”可以更简洁地表达为“伤害他”，同时“一切终于好起来了”可以更自然地翻译为“一切终于好转了”。这样可以使翻译更加通顺，符合中文的表达习惯。</think> \n<translate> 但受害人的哥哥表示想不出有谁会想要伤害他，并称“一切终于好转了。” </translate>"
+      "<think> \nThe draft translation mentions \"Chinese Character Coding Scheme\" which is not accurate. The correct term should be \"Chinese Character Set\". The source text specifies \"GB 18030 一 2005 信息技术 ”中文编码字符集\", so the correct term is \"Chinese Character Set\". The structure and editing changes mentioned in the draft need to be clarified as well. \n</think>\n<translate>\nThis document replaces GB 18030-2005, Information Technology - Chinese Character Set, with the following main technical changes compared to:\n</translate>",
+      "<think> \nThe draft translation starts with \"GB 18030-2005, apart from structural\", which seems to be missing the word \"changes\". The error evaluation indicates that \"ments\" should be \"changes\" and both errors are critical. Therefore, the correct translation should include \"changes\" and maintain the structure of the original sentence.\n</think>\n<translate>GB 18030-2005, apart from structural changes and editorial modifications:</translate>"
     ],
     "final_segments": [
-      "但受害者的哥哥表示，想不出有谁会加害于他，并说：“一切终于好起来了。”",
-      "但受害人的哥哥表示想不出有谁会想要伤害他，并称“一切终于好转了。”"
+      "This document replaces GB 18030-2005, Information Technology - Chinese Character Set, with the following main technical changes compared to:",
+      "GB 18030-2005, apart from structural changes and editorial modifications:"
     ],
     "repair_segment_prompts": [
-      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from English to Chinese. The draft translation segment is part of a translation for a source text segment. The Assistant needs to polish this draft translation segment based on the source text segment, the draft translation segment, the original source text segment that the draft was translated from, and error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: But the victim's brother says he can't think of anyone who would want to hurt him, saying, \"Things were finally going well for him.\"\nDraft Translation Segment: 但受害者的哥哥说，他想不出有人会想伤害他，并说：“他终于过上了好日子。\nDraft Source Segment: 但受害人的哥哥表示想不出有谁会想要加害于他，并称“一切终于好起来了。”\nError Evaluation: [\n  {\n    \"text\": \":“他终于过上了好日子\",\n    \"severity\": \"major\"\n  }\n]\nAssistant:",
-      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from English to Chinese. The draft translation segment is part of a translation for a source text segment. The Assistant needs to polish this draft translation segment based on the source text segment, the draft translation segment, the original source text segment that the draft was translated from, and error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: But the victim's brother says he can't think of anyone who would want to hurt him, saying, \"Things were finally going well for him.\"\nDraft Translation Segment: ”\nDraft Source Segment: 但受害人的哥哥表示想不出有谁会想要加害于他，并称“一切终于好起来了。”\nError Evaluation: []\nAssistant:"
+      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from Chinese to English. The draft translation segment is part of a translation for a source text. The Assistant needs to polish this draft translation segment based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: 本文件代替 GB 18030 一 2005 信息技术 ”中文编码字符集与 GB 18030 一 2005 相比,除结构调整和编辑性改动外,主要扩术变化如下:\nDraft Translation Segment: This document replaces GB 18030-2005, Information Technology - Chinese Character Coding Scheme, with the following main technical changes compared to\nError Evaluation: [\n  {\n    \"text\": \"30-2005, Information Technology - Chinese Character Coding Scheme\",\n    \"severity\": \"major\"\n  }\n]\nAssistant:",
+      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from Chinese to English. The draft translation segment is part of a translation for a source text. The Assistant needs to polish this draft translation segment based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: 本文件代替 GB 18030 一 2005 信息技术 ”中文编码字符集与 GB 18030 一 2005 相比,除结构调整和编辑性改动外,主要扩术变化如下:\nDraft Translation Segment: GB 18030-2005, apart from structural adjustments and editorial modifications:\nError Evaluation: [\n  {\n    \"text\": \"GB 18030-2005, apart from structural\",\n    \"severity\": \"critical\"\n  },\n  {\n    \"text\": \"ments\",\n    \"severity\": \"major\"\n  }\n]\nAssistant:"
     ],
     "repair_segment_format_scores": [
       1,
       1
     ],
-    "final_translation": "但受害者的哥哥表示，想不出有谁会加害于他，并说：“一切终于好起来了。” 但受害人的哥哥表示想不出有谁会想要伤害他，并称“一切终于好转了。”",
+    "final_translation": "This document replaces GB 18030-2005, Information Technology - Chinese Character Set, with the following main technical changes compared to: GB 18030-2005, apart from structural changes and editorial modifications:",
     "repair_format_score": 1,
-    "repair_generated_text": " <think> The draft translation segment has a few issues. The first issue is the word order, which is not natural in Chinese. \"他终于过上了好日子\" should be placed after the quote to maintain the flow of the sentence. Additionally, the phrase \"加害于他\" is more appropriate than \"想要伤害他\" in this context. \"想要伤害他\" implies a desire to harm, which might not be the exact meaning intended. \"加害于他\" means to harm him, which is more fitting for the context of a victim's brother. </think> <translate> 但受害者的哥哥表示，想不出有谁会加害于他，并说：“一切终于好起来了。” </translate>  <think> 在这个翻译段落中，源文本和翻译文本之间的信息是一致的，但可以进一步优化以提高流畅性和自然度。原句中的“加害于他”可以更简洁地表达为“伤害他”，同时“一切终于好起来了”可以更自然地翻译为“一切终于好转了”。这样可以使翻译更加通顺，符合中文的表达习惯。</think> \n<translate> 但受害人的哥哥表示想不出有谁会想要伤害他，并称“一切终于好转了。” </translate>",
+    "repair_generated_text": "<think> \nThe draft translation mentions \"Chinese Character Coding Scheme\" which is not accurate. The correct term should be \"Chinese Character Set\". The source text specifies \"GB 18030 一 2005 信息技术 ”中文编码字符集\", so the correct term is \"Chinese Character Set\". The structure and editing changes mentioned in the draft need to be clarified as well. \n</think>\n<translate>\nThis document replaces GB 18030-2005, Information Technology - Chinese Character Set, with the following main technical changes compared to:\n</translate> <think> \nThe draft translation starts with \"GB 18030-2005, apart from structural\", which seems to be missing the word \"changes\". The error evaluation indicates that \"ments\" should be \"changes\" and both errors are critical. Therefore, the correct translation should include \"changes\" and maintain the structure of the original sentence.\n</think>\n<translate>GB 18030-2005, apart from structural changes and editorial modifications:</translate>",
     "xcomet_final": {
-      "score": 0.8744749426841736,
+      "score": 0.6515334844589233,
       "error_spans": [
         {
-          "text": "加",
-          "confidence": 0.3500298261642456,
+          "text": "-2005, Information Technology - Chinese Character Set",
+          "confidence": 0.3855854570865631,
           "severity": "minor",
-          "start": 16,
-          "end": 17
+          "start": 31,
+          "end": 84
         },
         {
-          "text": "起来",
-          "confidence": 0.37483102083206177,
+          "text": ":",
+          "confidence": 0.40791547298431396,
+          "severity": "minor",
+          "start": 139,
+          "end": 140
+        },
+        {
+          "text": "-2005",
+          "confidence": 0.35541319847106934,
+          "severity": "minor",
+          "start": 149,
+          "end": 154
+        },
+        {
+          "text": "apart",
+          "confidence": 0.3611040711402893,
           "severity": "major",
-          "start": 30,
-          "end": 32
+          "start": 155,
+          "end": 161
         },
         {
-          "text": "好转",
-          "confidence": 0.35115522146224976,
-          "severity": "minor",
-          "start": 64,
-          "end": 66
+          "text": "editorial",
+          "confidence": 0.36705437302589417,
+          "severity": "major",
+          "start": 189,
+          "end": 199
         }
       ],
-      "system_score": 0.8997125029563904
+      "system_score": 0.6509050130844116
     }
   },
   {
     "index": 2,
-    "data_source": "train",
-    "lang_pair": "en-zh",
-    "src_text": "The body found at the Westfield Mall Wednesday morning was identified as 28-year-old San Francisco resident Frank Galicia, the San Francisco Medical Examiner's Office said.",
-    "tgt_text": "旧金山验尸官办公室表示，周三早上于西田购物中心发现的尸体确认为28岁旧金山居民 Frank Galicia。",
-    "draft_prompt": "A conversation between User and Assistant. The User asks for a translation from English to Chinese, and the Assistant solves it. The Assistant first thinks about the reasoning process in the mind and then provides the user with the final translation. The reasoning process and final translation are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> final translation here </translate>. \n\nUser:The body found at the Westfield Mall Wednesday morning was identified as 28-year-old San Francisco resident Frank Galicia, the San Francisco Medical Examiner's Office said.\nAssistant:",
-    "draft_generated_text": " <think> I need to translate the given English sentence into Chinese. The sentence contains specific names and titles, so I'll need to ensure these are accurately translated or kept as they are. The key elements are the location (Westfield Mall), the time (Wednesday morning), the person (Frank Galicia), and his age and residence (28-year-old San Francisco resident). The San Francisco Medical Examiner's Office is the source of the information. </think> <translate> 周三早上在西field购物中心发现的尸体被确认为28岁的旧金山居民弗兰克·加利西亚，旧金山法医办公室说。 </translate> \n\nNote: I've kept \"Westfield Mall\" as \"西field购物中心\" since it's a proper name. Also, \"San Francisco Medical Examiner's Office\" is translated to \"旧金山法医办公室\", which is the standard Chinese translation for this institution. \"Wednesday morning\" is translated to \"周三早上\" to maintain the original meaning. \"Frank Galicia\" is kept as is, as it's a name. \"28-year-old San Francisco resident\" is translated to \"28岁的旧金山居民\" to convey the same information. The sentence structure has been slightly adjusted to fit Chinese grammar.",
+    "data_source": "test_wmt23",
+    "lang_pair": "zh-en",
+    "src_text": "增加了本文件适用对象(见第 1 章)，",
+    "tgt_text": "The related objects of this record have been included (see Chapter 1),",
+    "draft_prompt": "A conversation between User and Assistant. The User asks for a translation from Chinese to English, and the Assistant translates it. The final translation are enclosed within <translate> </translate> tags, i.e., <translate> final translation here </translate>. \n\nUser:增加了本文件适用对象(见第 1 章)，\nAssistant:",
+    "draft_generated_text": "<translate>增加了本文件的适用对象（见第一章）</translate>",
     "draft_format_score": 1,
-    "draft_translation": "周三早上在西field购物中心发现的尸体被确认为28岁的旧金山居民弗兰克·加利西亚，旧金山法医办公室说。",
+    "draft_translation": "增加了本文件的适用对象（见第一章）",
     "draft_segments": [
-      "周三早上在西field购物中心发现的尸体被确认为28岁的旧金山居民弗兰克·加利西亚，旧金山法医办公室说。"
+      "增加了本文件的适用对象（见第一章）"
     ],
     "draft_segment_results": [
       {
-        "score": 0.6786174774169922,
+        "score": 0.7485061883926392,
         "error_spans": [
           {
-            "text": "西field",
-            "confidence": 0.34963369369506836,
+            "text": "增加了本文件的适用对象(见第一章)",
+            "confidence": 0.45154136419296265,
             "severity": "major",
-            "start": 5,
-            "end": 11
-          },
-          {
-            "text": "的",
-            "confidence": 0.3540155589580536,
-            "severity": "major",
-            "start": 17,
-            "end": 18
-          },
-          {
-            "text": "兰克·加利西亚,",
-            "confidence": 0.4088630974292755,
-            "severity": "major",
-            "start": 34,
-            "end": 42
-          },
-          {
-            "text": "金山法医办公室说",
-            "confidence": 0.46497735381126404,
-            "severity": "major",
-            "start": 43,
-            "end": 51
+            "start": 0,
+            "end": 17
           }
         ],
-        "system_score": 0.7593656107783318
+        "system_score": 0.4922846078872681
       }
     ],
     "xcomet_draft": {
-      "score": 0.6786174774169922,
+      "score": 0.7485061883926392,
       "error_spans": [
         {
-          "text": "西field",
-          "confidence": 0.34963369369506836,
+          "text": "增加了本文件的适用对象(见第一章)",
+          "confidence": 0.45154136419296265,
           "severity": "major",
-          "start": 5,
-          "end": 11
-        },
-        {
-          "text": "的",
-          "confidence": 0.3540155589580536,
-          "severity": "major",
-          "start": 17,
-          "end": 18
-        },
-        {
-          "text": "兰克·加利西亚,",
-          "confidence": 0.4088630974292755,
-          "severity": "major",
-          "start": 34,
-          "end": 42
-        },
-        {
-          "text": "金山法医办公室说",
-          "confidence": 0.46497735381126404,
-          "severity": "major",
-          "start": 43,
-          "end": 51
+          "start": 0,
+          "end": 17
         }
       ]
     },
     "repair_segment_outputs": [
-      " <think> 在这个翻译中，有几个明显的错误需要修正。首先，“西field”应该是“西田”，这是地名的正确拼写。其次，“的”字在中文中通常不需要，因为它在英文中没有直接对应。第三，“兰克·加利西亚”应该是“弗兰克·加利西亚”，这是名字的正确拼写。最后，“金山法医办公室说”应该改为“旧金山法医办公室说”，以保持与原文的一致性。 </think> \n<translate> 旧金山法医办公室表示，周三早上于西田购物中心发现的尸体确认为28岁的旧金山居民弗兰克·加利西亚。 </translate>"
+      "<think> 根据错误评估，原译文缺少了“本文件适用对象”。同时，“第 1 章”应翻译为“Chapter 1”，因为这是英文中常见的章节编号方式。因此，正确的翻译应该是：“增加了本文件的适用对象（见 Chapter 1）”。 </think>\n<translate> 增加了本文件的适用对象（见 Chapter 1）</translate>"
     ],
     "final_segments": [
-      "旧金山法医办公室表示，周三早上于西田购物中心发现的尸体确认为28岁的旧金山居民弗兰克·加利西亚。"
+      "增加了本文件的适用对象（见 Chapter 1）"
     ],
     "repair_segment_prompts": [
-      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from English to Chinese. The draft translation segment is part of a translation for a source text segment. The Assistant needs to polish this draft translation segment based on the source text segment, the draft translation segment, the original source text segment that the draft was translated from, and error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: The body found at the Westfield Mall Wednesday morning was identified as 28-year-old San Francisco resident Frank Galicia, the San Francisco Medical Examiner's Office said.\nDraft Translation Segment: 周三早上在西field购物中心发现的尸体被确认为28岁的旧金山居民弗兰克·加利西亚，旧金山法医办公室说。\nDraft Source Segment: 旧金山验尸官办公室表示，周三早上于西田购物中心发现的尸体确认为28岁旧金山居民 Frank Galicia。\nError Evaluation: [\n  {\n    \"text\": \"西field\",\n    \"severity\": \"major\"\n  },\n  {\n    \"text\": \"的\",\n    \"severity\": \"major\"\n  },\n  {\n    \"text\": \"兰克·加利西亚,\",\n    \"severity\": \"major\"\n  },\n  {\n    \"text\": \"金山法医办公室说\",\n    \"severity\": \"major\"\n  }\n]\nAssistant:"
+      "A conversation between User and Assistant. The User asks for polishing a draft translation segment from Chinese to English. The draft translation segment is part of a translation for a source text. The Assistant needs to polish this draft translation segment based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: 增加了本文件适用对象(见第 1 章)，\nDraft Translation Segment: 增加了本文件的适用对象（见第一章）\nError Evaluation: [\n  {\n    \"text\": \"增加了本文件的适用对象(见第一章)\",\n    \"severity\": \"major\"\n  }\n]\nAssistant:"
     ],
     "repair_segment_format_scores": [
       1
     ],
-    "final_translation": "旧金山法医办公室表示，周三早上于西田购物中心发现的尸体确认为28岁的旧金山居民弗兰克·加利西亚。",
+    "final_translation": "增加了本文件的适用对象（见 Chapter 1）",
     "repair_format_score": 1,
-    "repair_generated_text": " <think> 在这个翻译中，有几个明显的错误需要修正。首先，“西field”应该是“西田”，这是地名的正确拼写。其次，“的”字在中文中通常不需要，因为它在英文中没有直接对应。第三，“兰克·加利西亚”应该是“弗兰克·加利西亚”，这是名字的正确拼写。最后，“金山法医办公室说”应该改为“旧金山法医办公室说”，以保持与原文的一致性。 </think> \n<translate> 旧金山法医办公室表示，周三早上于西田购物中心发现的尸体确认为28岁的旧金山居民弗兰克·加利西亚。 </translate>",
+    "repair_generated_text": "<think> 根据错误评估，原译文缺少了“本文件适用对象”。同时，“第 1 章”应翻译为“Chapter 1”，因为这是英文中常见的章节编号方式。因此，正确的翻译应该是：“增加了本文件的适用对象（见 Chapter 1）”。 </think>\n<translate> 增加了本文件的适用对象（见 Chapter 1）</translate>",
     "xcomet_final": {
-      "score": 0.8366459608078003,
+      "score": 0.7590575218200684,
       "error_spans": [
         {
-          "text": "法医",
-          "confidence": 0.43258529901504517,
+          "text": "增加了本文件的适用对象(",
+          "confidence": 0.44560688734054565,
           "severity": "major",
-          "start": 3,
-          "end": 5
+          "start": 0,
+          "end": 12
         },
         {
-          "text": "克·加利西亚",
-          "confidence": 0.3632062077522278,
+          "text": "Chapter",
+          "confidence": 0.3476433753967285,
           "severity": "major",
-          "start": 41,
-          "end": 47
+          "start": 13,
+          "end": 21
         }
       ],
-      "system_score": 0.8997125029563904
+      "system_score": 0.6509050130844116
     }
   }
 ]

@@ -5,6 +5,31 @@
 
 from typing import Tuple, Optional, List
 import re
+import torch
+from wtpsplit import SaT
+
+# ============================================================
+# SaT-3l-sm 句子切分模型（ONNX + GPU 优先）
+# ============================================================
+
+# 检查是否有 CUDA
+_HAS_CUDA = torch.cuda.is_available()
+
+if _HAS_CUDA:
+    # ONNX 推理，优先使用 GPU，再回退 CPU
+    _sat_model = SaT(
+        "sat-3l-sm",
+        ort_providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+    )
+else:
+    # 只有 CPU 的情况：只用 CPUExecutionProvider
+    _sat_model = SaT(
+        "sat-3l-sm",
+        ort_providers=["CPUExecutionProvider"],
+    )
+
+# SaT 默认就是 ONNX 推理（因为我们传了 ort_providers），
+# 不需要再 .half().to("cuda")，那是 PyTorch 模型的写法。
 
 
 def check_and_extract_translate_tag(text: str) -> Tuple[bool, Optional[str], int]:
@@ -111,7 +136,7 @@ def is_connective_start(text: str, idx: int) -> bool:
     return False
 
 
-def split_long_with_soft_punct(sentence: str, max_len: int = 40, hard_max_len: int = 80) -> List[str]:
+def split_long_with_soft_punct(sentence: str, max_len: int = 100, hard_max_len: int = 150) -> List[str]:
     """
     在终结句内部，用软标点和长度限制继续切分。
     
@@ -186,7 +211,7 @@ def split_long_with_soft_punct(sentence: str, max_len: int = 40, hard_max_len: i
     return segments
 
 
-def split_into_segments(text: str, max_len: int = 40, hard_max_len: int = 80) -> List[str]:
+def split_into_segments(text: str, max_len: int = 100, hard_max_len: int = 150) -> List[str]:
     """
     同传式切块：将文本切成适合翻译的短句列表。
     
@@ -198,8 +223,8 @@ def split_into_segments(text: str, max_len: int = 40, hard_max_len: int = 80) ->
     
     Args:
         text: 待划分的文本
-        max_len: 理想短句长度（默认40字符）
-        hard_max_len: 绝对最大长度，超过则强制切分（默认80字符）
+        max_len: 理想短句长度（默认100字符）
+        hard_max_len: 绝对最大长度，超过则强制切分（默认150字符）
     
     Returns:
         按顺序排列的短句列表（包含原标点）。
@@ -247,3 +272,40 @@ def split_into_segments(text: str, max_len: int = 40, hard_max_len: int = 80) ->
     
     return results
 
+
+# ============================================================
+# 新增：使用 wtpsplit 的分句器
+# ============================================================
+
+def split_into_segments_wtpsplit(text: str) -> List[str]:
+    """
+    使用 SaT-3l-sm（ONNX 推理）进行句子切分。
+
+    依赖:
+        - pip install wtpsplit[onnx-gpu]
+    """
+    if not text or not isinstance(text, str):
+        return []
+
+    # SaT.split 支持传入单个字符串或字符串列表：
+    #   - sat.split("...") -> ["句1", "句2", ...]
+    #   - sat.split([...]) -> 迭代器，每个元素是一个句子列表
+    try:
+        segments = _sat_model.split(text)
+    except Exception as e:
+        # 保险起见出点问题直接退回整段
+        print(f"[wtpsplit] SaT-3l-sm split failed, fallback to single segment. Error: {e}")
+        return [text.strip()] if text.strip() else []
+
+    # 清理一下空白
+    segments = [
+        s.strip()
+        for s in segments
+        if isinstance(s, str) and s.strip()
+    ]
+
+    # 如果 SaT 没切出来（极端情况），就退回原文
+    if not segments and text.strip():
+        return [text.strip()]
+
+    return segments

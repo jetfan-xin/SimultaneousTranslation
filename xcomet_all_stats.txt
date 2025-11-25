@@ -382,4 +382,24 @@
 [Stats] Avg. error spans per draft sample: 2.88
 [Stats] Avg. error spans per final sample: 2.59
 [Stats] XCOMET Final scores - Mean: 0.7356, Min: -0.0188, Max: 1.0000
-[Stats] 终稿改进初稿的样本数: 1017/1958 (51.9%)
+
+
+Qwen2.5-3B-Instruct
+
+[Stats] 终稿改进初稿的样本数: 1017/1958 (51.9%)[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/test_baseline_wmt23_zh-en.json
+[Stats] Draft格式正确率: 1965/1976 (99.4%)
+[Stats] Repair格式正确率: 1617/1976 (81.8%)
+[Stats] XCOMET Draft scores - Mean: 0.8393, Min: 0.0904, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.47
+[Stats] Avg. error spans per final sample: 2.28
+[Stats] XCOMET Final scores - Mean: 0.8407, Min: 0.1012, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 883/1965 (44.9%)
+
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/test_baseline_wmt24_en-zh.json
+[Stats] Draft格式正确率: 972/997 (97.5%)
+[Stats] Repair格式正确率: 882/997 (88.5%)
+[Stats] XCOMET Draft scores - Mean: 0.7281, Min: 0.0522, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.19
+[Stats] Avg. error spans per final sample: 3.02
+[Stats] XCOMET Final scores - Mean: 0.7239, Min: 0.2262, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 439/972 (45.2%)

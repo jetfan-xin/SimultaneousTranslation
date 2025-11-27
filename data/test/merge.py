@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 
 # 结果文件所在目录
-ROOT = Path("/ltstorage/home/4xin/SimultaneousTranslation/results")
+ROOT = Path("/ltstorage/home/4xin/SimultaneousTranslation/results_Qwen2.5-3B_100")
 all_data = pd.DataFrame()
 
 
@@ -17,6 +17,10 @@ def parse_info_from_filename(filename: str):
       - method: baseline / 其它（来自 test_XXX_*）
     """
     name = filename.lower()
+
+    # ---------- 0.基线还是扩展 ----------
+    # 先从文件名里直接正则抓 en-zh / zh-en 等
+    mode = "baseline" if "baseline" in name else "extended"
 
     # ---------- 1. 语言对 ----------
     # 先从文件名里直接正则抓 en-zh / zh-en 等
@@ -64,19 +68,20 @@ def parse_info_from_filename(filename: str):
         dataset = "wmt23"
 
     # ---------- 3. method ----------
-    # 约定：文件名形如 test_baseline_xxx_total2.csv
+    # 约定：文件名形如 test_baseline_xxx_total.csv
     # 用 test_ 和下一个下划线之间的部分作为 method
     method_match = re.search(r"test_([^_]+)_", name)
     method = method_match.group(1) if method_match else "unknown"
 
-    return dataset, subset, lang_pair, method
+    return mode, dataset, subset, lang_pair, method
 
 
 for f in ROOT.rglob("*_total.csv"):
     df = pd.read_csv(f)
 
-    dataset, subset, lang_pair, method = parse_info_from_filename(f.name)
+    mode, dataset, subset, lang_pair, method = parse_info_from_filename(f.name)
 
+    df["mode"] = mode
     df["dataset"] = dataset
     df["subset"] = subset  # 对于非 commonmt/drt 可能是 None
     df["lang_pair"] = lang_pair

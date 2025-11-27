@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Qwen2.5-3B模型调用模块
+Qwen模型调用模块
 复用MT_Grpo中vllm的使用方式
 """
 
@@ -29,7 +29,7 @@ except Exception as e:
     print("[Warning] Will use transformers backend instead")
 
 class QwenGenerator:
-    """Qwen2.5-3B模型生成器，支持draft mode"""
+    """Qwen模型生成器，支持draft mode"""
     
     def __init__(
         self,
@@ -245,6 +245,7 @@ class QwenGenerator:
 
                     # 根据 test_time/vllm_infer.py 的设置来配置 vLLM
                     # max_model_len: test_time 中使用 16384
+                    # max_model_len 是「这个 vLLM 引擎一次能容纳的最大序列长度（prompt + 输出）」的上限，用来在初始化时决定 KV cache 的大小和显存占用。是“能力上限、硬上限”。
                     default_max_model_len = kwargs.get("max_model_len", 16384)
                     if default_max_model_len > 32768:
                         print(f"[Qwen] Warning: max_model_len={default_max_model_len} 可能过大，将限制到 16384")

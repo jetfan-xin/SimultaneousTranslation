@@ -1,6 +1,6 @@
 # SimultaneousTranslation
 
-以同声传译为灵感，增强LLM的翻译能力。使用 Qwen2.5-7B 生成初稿翻译，利用 XCOMET 识别错误片段，结合错误判断完善初稿，得到最终翻译。
+以同声传译为灵感，增强LLM的翻译能力。使用 Qwen3-7B 生成初稿翻译，利用 XCOMET 识别错误片段，结合错误判断完善初稿，得到最终翻译。
 
 自动管理多卡 GPU 资源，支持整句与扩展（短句修复）两种模式。
 
@@ -20,7 +20,7 @@
 ## 主要组件
 - `main.py`：流水线主控（数据加载、缓存、GPU 映射、分阶段执行、日志）。  
 - `data/process_data.py`：JSONL 读取、prompt 生成、Parquet 缓存。  
-- `qwen_generator.py`：Qwen2.5-7B 推理封装，vLLM/transformers 双后端，显存自适应。  
+- `qwen_generator.py`：Qwen3-7B 推理封装，vLLM/transformers 双后端，显存自适应。  
 - `xcomet_loader.py`：XCOMET-XL 加载与评分，支持 GPU/CPU、错误 span 输出。  
 - `utils.py`：`<translate>` 提取、错误 span 格式化、同传式切块等工具。  
 - `experiments/`：XCOMET 策略对比等实验脚本。  
@@ -31,7 +31,7 @@
 ```shell
 SimultaneousTranslation/
 ├─ main.py # 流水线主控（数据加载、缓存、GPU 映射、分阶段执行、日志）。 
-├─ qwen_generator.py # Qwen2.5-7B-Instruct 推理封装，vLLM/transformers 双后端，显存自适应。
+├─ qwen_generator.py # Qwen3-7B-Instruct 推理封装，vLLM/transformers 双后端，显存自适应。
 ├─ xcomet_loader.py # XCOMET-XL 加载与评分，支持 GPU/CPU、错误 span 输出。  
 ├─ utils.py # `<translate>` 提取、错误 span 格式化、同传式切块等工具。
 ├─ download_xcomet.py # 下载 XCOMET-XL 模型
@@ -163,7 +163,7 @@ export WORD_QE_CKPT=~/models/XCOMET-XL/checkpoints/model.ckpt
 
 ```bash
 python main.py \
-    --data_dir data \
+    
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --test_files wmt23_zh-en.jsonl \
     --num_samples 5 \ # 只测试前5个数据
@@ -174,7 +174,7 @@ python main.py \
 
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-    --data_dir data \
+    
     --test_files wmt23_zh-en.jsonl \
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --num_samples 5 \ # 只测试前5个数据
@@ -186,7 +186,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 - 也可以分别指定 XCOMET 和 Qwen 使用的 GPU 物理序号(推荐，防止使用相同 GPU 导致 OOM)
   ```bash
   CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-    --data_dir data \
+    
     --test_files wmt23_zh-en.jsonl \
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --xcomet_gpus 0,1 \
@@ -230,12 +230,11 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 #### GPU上运行：
 
 ```bash
-CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-    --data_dir data \
+CUDA_VISIBLE_DEVICES=1,2,3,4 python main.py \
     --test_files wmt23_zh-en.jsonl \
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
-    --xcomet_gpus 0,1 \
-    --qwen_gpus 2,4 \
+    --xcomet_gpus 1,2 \
+    --qwen_gpus 3,4 \
     --pipeline_mode extended \
     --num_samples 3 \ # 只测试前3个数据
     --output_file test_3_extended_gpu.json
@@ -293,7 +292,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 1. **共享GPU**（只设置环境变量）：
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-    --data_dir data \
     --test_files wmt23_zh-en.jsonl \
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --num_samples 5 \ # 只测试前5个数据
@@ -304,7 +302,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 2. **分别指定GPU**：推荐
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-    --data_dir data \
     --test_files wmt23_zh-en.jsonl \
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --xcomet_gpus 0,1 \
@@ -317,7 +314,6 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 3. **混合模式**（XCOMET用CPU，Qwen用GPU）：
 ```bash
 CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
-    --data_dir data \
     --test_files wmt23_zh-en.jsonl \
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \
     --xcomet_cpu \
@@ -334,10 +330,9 @@ CUDA_VISIBLE_DEVICES=0,1,2,4 python main.py \
 ```bash
 # 指定使用GPU设备（根据实际需求调整）
 CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
-    --data_dir data \                          # 数据目录
     --test_files xxx.jsonl \      # 测试文件，默认位于 data/test/used 下
-    --tokenizer_path Qwen/Qwen2.5-7B-Instruct \  # Tokenizer路径（默认：Qwen/Qwen2.5-7B-Instruct）
-    --qwen_model_path Qwen/Qwen2.5-7B-Instruct \ # Qwen模型路径（默认：Qwen/Qwen2.5-7B-Instruct）
+    --tokenizer_path Qwen/Qwen3-7B-Instruct \  # Tokenizer路径（默认：Qwen/Qwen3-7B-Instruct）
+    --qwen_model_path Qwen/Qwen3-7B-Instruct \ # Qwen模型路径（默认：Qwen/Qwen3-7B-Instruct）
     --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \  # XCOMET checkpoint（必需）
     --use_vllm \                                # 使用vllm（推荐，更快，默认：True）
     --max_tokens 2048 \                         # 最大生成token数（默认：2048，与test_time对齐）
@@ -395,7 +390,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
 - **输入**：原始数据（`src_text`、`tgt_text`、`lang_pair`）
 - **处理**：
   1. 为每个样本生成 draft prompt（使用 `draft` 模板）
-  2. 批量调用 Qwen2.5-7B 生成初稿翻译
+  2. 批量调用 Qwen3-7B 生成初稿翻译
   3. 保存生成的原始文本到 `draft_generated_text`
 - **输出**：`draft_generated_text`（包含 `<think>` 和 `<translate>` 标签）
 
@@ -442,7 +437,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3,4 python main.py \
 - **输入**：原始数据中的完整 `src_text`（不切分）
 - **处理**：
   1. 为每个完整原文生成 draft prompt（使用 `draft` 模板）
-  2. 批量调用 Qwen2.5-7B 生成完整原文的初稿翻译
+  2. 批量调用 Qwen3-7B 生成完整原文的初稿翻译
   3. 保存生成的原始文本到 `draft_generated_text`
 - **输出**：
   - `draft_generated_text`：每个样本的完整初稿生成文本（包含 `<think>` 和 `<translate>` 标签）
@@ -597,7 +592,7 @@ print(f"XCOMET score: {score}")
 
 ```python
 from qwen_generator import QwenGenerator
-generator = QwenGenerator("Qwen/Qwen2.5-7B-Instruct", use_vllm=True)
+generator = QwenGenerator("Qwen/Qwen3-7B-Instruct", use_vllm=True)
 translation = generator.generate_from_source(
     source_texts="Hello world",
     lang_pair="en-zh",
@@ -706,7 +701,7 @@ segments = split_into_segments(text, max_len=100, hard_max_len=150)
 2. **GPU内存管理**：
    - `--gpu_memory_utilization`：vLLM的GPU内存使用率（0.0-1.0），默认0.85（与test_time对齐）
    - 如果遇到OOM，程序会自动降低utilization或选择其他GPU
-   - Qwen2.5-7B模型较大，建议每个GPU至少16GB内存
+   - Qwen3-7B模型较大，建议每个GPU至少16GB内存
    - 如果内存不足，可以：
      - 减小batch_size（默认16）
      - 降低gpu_memory_utilization（默认0.85）

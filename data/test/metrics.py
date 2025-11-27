@@ -306,7 +306,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         base_path = sys.argv[1]
     else:
-        base_path = f"/ltstorage/home/4xin/SimultaneousTranslation/results"
+        base_path = f"/ltstorage/home/4xin/SimultaneousTranslation/results_Qwen2.5-3B_100"
 
     base_path = os.path.abspath(base_path)
     print(f"Searching for result jsons under: {base_path}")

@@ -59,7 +59,7 @@ models/
 
 # 日志文件
 *.log
-.xcomet_all_stats.txt
+xcomet_all_stats.txt
 
 # 系统文件
 .DS_Store

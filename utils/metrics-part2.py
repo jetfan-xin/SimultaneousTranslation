@@ -114,11 +114,8 @@ def eval_results_file(result_file: str):
 
     print(f"Detected language pair: {lang_pair}")
 
-    # ---------- 收集 draft / final 的数据 ----------
-    # 对每条原始样本保留基本信息
+    # ---------- 仅收集 final（润色后）数据 ----------
     base_rows = []
-    # 用于计算指标的子集
-    draft_ids, draft_srcs, draft_refs, draft_mts = [], [], [], []
     final_ids, final_srcs, final_refs, final_mts = [], [], [], []
 
     for ex in data:
@@ -148,13 +145,6 @@ def eval_results_file(result_file: str):
             }
         )
 
-        # draft 用于评测
-        if src and ref and draft:
-            draft_ids.append(idx)
-            draft_srcs.append(src)
-            draft_refs.append(ref)
-            draft_mts.append(draft)
-
         # final 用于评测
         if src and ref and final:
             final_ids.append(idx)
@@ -162,51 +152,7 @@ def eval_results_file(result_file: str):
             final_refs.append(ref)
             final_mts.append(final)
 
-    # ---------- 评测 draft ----------
-    draft_corpus_bleu = None
-    draft_sentence_bleus = {}
-    draft_comet_scores = {}
-    draft_comet_kiwi_scores = {}
-    draft_sys_comet = None
-    draft_sys_kiwi = None
-
-    if draft_mts:
-        print(f"  [Draft] #valid samples: {len(draft_mts)}")
-
-        # corpus BLEU
-        draft_corpus_bleu = bleu_score(draft_mts, [draft_refs], tgt_lang, is_sent=False)
-
-        # COMET-DA
-        comet_inputs = [
-            {"src": s, "mt": m, "ref": r}
-            for s, m, r in zip(draft_srcs, draft_mts, draft_refs)
-        ]
-        model_output = comet_model.predict(comet_inputs, batch_size=8, gpus=1)
-        comet_sent = list(model_output.scores)
-        draft_sys_comet = model_output.system_score
-
-        # COMET-Kiwi
-        kiwi_inputs = [{"src": s, "mt": m} for s, m in zip(draft_srcs, draft_mts)]
-        kiwi_output = comet_kiwi_model.predict(kiwi_inputs, batch_size=8, gpus=1)
-        kiwi_sent = list(kiwi_output.scores)
-        draft_sys_kiwi = kiwi_output.system_score
-
-        # sentence BLEU
-        bleu_sent_list = []
-        for m, r in zip(draft_mts, draft_refs):
-            b = bleu_score(m, r, tgt_lang, is_sent=True)
-            bleu_sent_list.append(b)
-
-        # 按 index 写回映射
-        for i, idx in enumerate(draft_ids):
-            draft_sentence_bleus[idx] = bleu_sent_list[i]
-            draft_comet_scores[idx] = comet_sent[i]
-            draft_comet_kiwi_scores[idx] = kiwi_sent[i]
-
-    else:
-        print("  [Draft] No valid draft translations, skip metric computation.")
-
-    # ---------- 评测 final ----------
+    # ---------- 仅评测 final ----------
     final_corpus_bleu = None
     final_sentence_bleus = {}
     final_comet_scores = {}
@@ -248,44 +194,53 @@ def eval_results_file(result_file: str):
     base = result_file.rsplit(".json", 1)[0]
     total_path = base + "_total.csv"
 
-    total_row = {
-        "lang_pair": lang_pair,
-        "num_draft": len(draft_mts),
-        "num_final": len(final_mts),
-        "BLEU_draft": draft_corpus_bleu,
-        "BLEU_final": final_corpus_bleu,
-        "COMET_draft_sys": draft_sys_comet,
-        "COMET_final_sys": final_sys_comet,
-        "COMET_KIWI_draft_sys": draft_sys_kiwi,
-        "COMET_KIWI_final_sys": final_sys_kiwi,
-    }
+    # ---------- 保存总分 CSV（保留已有 draft 列） ----------
+    if os.path.exists(total_path):
+        existing = pd.read_csv(total_path).iloc[0].to_dict()
+    else:
+        existing = {}
+
+    total_row = existing.copy()
+    total_row.update(
+        {
+            "lang_pair": lang_pair,
+            "num_final": len(final_mts),
+            "BLEU_final": final_corpus_bleu,
+            "COMET_final_sys": final_sys_comet,
+            "COMET_KIWI_final_sys": final_sys_kiwi,
+        }
+    )
 
     pd.DataFrame([total_row]).to_csv(
         total_path, index=False, encoding="utf-8-sig"
     )
     print(f"  [Saved] total metrics -> {total_path}")
 
-    # ---------- 保存逐句 CSV ----------
+    # ---------- 保存逐句 CSV（保留已有 draft 列） ----------
+    each_path = base + "_each.csv"
+    existing_rows = {}
+    if os.path.exists(each_path):
+        df_exist = pd.read_csv(each_path)
+        for _, r in df_exist.iterrows():
+            existing_rows[int(r["index"])] = r.to_dict()
+
     each_rows = []
     for row in base_rows:
-        idx = row["index"]
-        each_rows.append(
+        idx = int(row["index"])
+        base_dict = existing_rows.get(idx, {})
+        base_dict.update(
             {
                 "index": idx,
                 "src": row["src"],
                 "ref": row["ref"],
-                "draft_translation": row["draft_translation"],
                 "final_translation": row["final_translation"],
-                "BLEU_draft": draft_sentence_bleus.get(idx),
-                "COMET_draft": draft_comet_scores.get(idx),
-                "COMET_KIWI_draft": draft_comet_kiwi_scores.get(idx),
                 "BLEU_final": final_sentence_bleus.get(idx),
                 "COMET_final": final_comet_scores.get(idx),
                 "COMET_KIWI_final": final_comet_kiwi_scores.get(idx),
             }
         )
+        each_rows.append(base_dict)
 
-    each_path = base + "_each.csv"
     pd.DataFrame(each_rows).to_csv(each_path, index=False, encoding="utf-8-sig")
     print(f"  [Saved] sentence-level metrics -> {each_path}")
 
@@ -306,7 +261,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         base_path = sys.argv[1]
     else:
-        base_path = f"/ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-8B"
+        base_path = f"/ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2"
 
     base_path = os.path.abspath(base_path)
     print(f"Searching for result jsons under: {base_path}")
@@ -315,18 +270,6 @@ if __name__ == "__main__":
         name = os.path.basename(data_file)
         if not name.endswith(".json"):
             continue
-        # 如果你的结果文件有固定前缀，可以加一行：
-        # if not name.startswith("test_baseline_"): continue
-
-        # ========= 新增：如果 total 和 each 都存在，就跳过 =========
-        base = str(data_file).rsplit(".json", 1)[0]
-        total_path = base + "_total.csv"
-        each_path = base + "_each.csv"
-
-        if os.path.exists(total_path) and os.path.exists(each_path):
-            print(f"\n[Skip] {data_file} 已有 {os.path.basename(total_path)} 和 {os.path.basename(each_path)}，跳过计算。")
-            continue
-        # =======================================================
 
         try:
             eval_results_file(str(data_file))

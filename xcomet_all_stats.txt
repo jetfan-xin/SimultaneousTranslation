@@ -484,3 +484,251 @@ Qwen2.5-3B-Instruct
 [Stats] Avg. error spans per final sample: 3.07
 [Stats] XCOMET Final scores - Mean: 0.7949, Min: 0.2489, Max: 1.0000
 [Stats] 终稿改进初稿的样本数: 40/100 (40.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_culturemt_en-te.json
+[Stats] Draft格式正确率: 0/754 (0.0%)
+[Stats] Repair格式正确率: 0/754 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_wmt23_de-en.json
+[Stats] Draft格式正确率: 0/549 (0.0%)
+[Stats] Repair格式正确率: 0/549 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_wmt24_en-ja.json
+[Stats] Draft格式正确率: 0/997 (0.0%)
+[Stats] Repair格式正确率: 0/997 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_wmt24_en-zh.json
+[Stats] Draft格式正确率: 0/997 (0.0%)
+[Stats] Repair格式正确率: 0/997 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_culturemt_en-es.json
+[Stats] Draft格式正确率: 0/1580 (0.0%)
+[Stats] Repair格式正确率: 0/1580 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_rtt_en-de.json
+[Stats] Draft格式正确率: 0/500 (0.0%)
+[Stats] Repair格式正确率: 0/500 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_wmt23_zh-en.json
+[Stats] Draft格式正确率: 0/1976 (0.0%)
+[Stats] Repair格式正确率: 0/1976 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_culturemt_en-hi.json
+[Stats] Draft格式正确率: 0/1086 (0.0%)
+[Stats] Repair格式正确率: 0/1086 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_culturemt_en-ta.json
+[Stats] Draft格式正确率: 0/677 (0.0%)
+[Stats] Repair格式正确率: 0/677 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_commonmt_contextual_syntactic_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 0/350 (0.0%)
+[Stats] Repair格式正确率: 0/350 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_drt_MetaphorTrans_en-zh.json
+[Stats] Draft格式正确率: 0/2000 (0.0%)
+[Stats] Repair格式正确率: 0/2000 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_commonmt_contextless_syntactic_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 0/450 (0.0%)
+[Stats] Repair格式正确率: 0/450 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_culturemt_en-zh.json
+[Stats] Draft格式正确率: 0/777 (0.0%)
+[Stats] Repair格式正确率: 0/777 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_culturemt_en-fr.json
+[Stats] Draft格式正确率: 0/2073 (0.0%)
+[Stats] Repair格式正确率: 0/2073 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_commonmt_lexical_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 0/400 (0.0%)
+[Stats] Repair格式正确率: 0/400 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B/test_extended_culturemt_en-te.json
+[Stats] Draft格式正确率: 754/754 (100.0%)
+[Stats] Repair格式正确率: 0/754 (0.0%)
+[Stats] XCOMET Draft scores - Mean: 0.4414, Min: -0.0851, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.28
+[Stats] Avg. error spans per final sample: 12.71
+[Stats] XCOMET Final scores - Mean: 0.1779, Min: -0.0216, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 66/754 (8.8%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_extended_culturemt_en-ta.json
+[Stats] Draft格式正确率: 677/677 (100.0%)
+[Stats] Repair格式正确率: 0/677 (0.0%)
+[Stats] XCOMET Draft scores - Mean: 0.3003, Min: -0.0226, Max: 0.9966
+[Stats] Avg. error spans per draft sample: 1.50
+[Stats] Avg. error spans per final sample: 1.63
+[Stats] XCOMET Final scores - Mean: 0.2137, Min: -0.0066, Max: 0.9966
+[Stats] 终稿改进初稿的样本数: 112/677 (16.5%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_extended_culturemt_en-zh.json
+[Stats] Draft格式正确率: 777/777 (100.0%)
+[Stats] Repair格式正确率: 0/777 (0.0%)
+[Stats] XCOMET Draft scores - Mean: 0.6844, Min: 0.0876, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.67
+[Stats] Avg. error spans per final sample: 6.49
+[Stats] XCOMET Final scores - Mean: 0.2201, Min: -0.0422, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 25/777 (3.2%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_extended_culturemt_en-ta.json
+[Stats] Draft格式正确率: 1354/1354 (100.0%)
+[Stats] Repair格式正确率: 0/1354 (0.0%)
+[Stats] XCOMET Draft scores - Mean: 0.3003, Min: -0.0226, Max: 0.9966
+[Stats] Avg. error spans per draft sample: 1.50
+[Stats] Avg. error spans per final sample: 1.68
+[Stats] XCOMET Final scores - Mean: 0.2149, Min: -0.0121, Max: 0.9966
+[Stats] 终稿改进初稿的样本数: 276/1354 (20.4%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_extended_commonmt_contextless_syntactic_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 450/450 (100.0%)
+[Stats] Repair格式正确率: 0/450 (0.0%)
+[Stats] XCOMET Draft scores - Mean: 0.9169, Min: 0.1673, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.19
+[Stats] Avg. error spans per final sample: 2.51
+[Stats] XCOMET Final scores - Mean: 0.4412, Min: 0.0659, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 16/450 (3.6%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_extended_commonmt_lexical_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 400/400 (100.0%)
+[Stats] Repair格式正确率: 0/400 (0.0%)
+[Stats] XCOMET Draft scores - Mean: 0.9228, Min: 0.2317, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.17
+[Stats] Avg. error spans per final sample: 1.56
+[Stats] XCOMET Final scores - Mean: 0.4649, Min: 0.0283, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 13/400 (3.2%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_drt_MetaphorTrans_en-zh.json
+[Stats] Draft格式正确率: 1/2 (50.0%)
+[Stats] Repair格式正确率: 1/2 (50.0%)
+[Stats] XCOMET Draft scores - Mean: 0.4599, Min: 0.4599, Max: 0.4599
+[Stats] Avg. error spans per draft sample: 2.50
+[Stats] Avg. error spans per final sample: 5.00
+[Stats] XCOMET Final scores - Mean: 0.4655, Min: 0.4655, Max: 0.4655
+[Stats] 终稿改进初稿的样本数: 1/1 (100.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_drt_MetaphorTrans_en-zh.json
+[Stats] Draft格式正确率: 1/2 (50.0%)
+[Stats] Repair格式正确率: 1/2 (50.0%)
+[Stats] XCOMET Draft scores - Mean: 0.4599, Min: 0.4599, Max: 0.4599
+[Stats] Avg. error spans per draft sample: 2.50
+[Stats] Avg. error spans per final sample: 5.00
+[Stats] XCOMET Final scores - Mean: 0.4655, Min: 0.4655, Max: 0.4655
+[Stats] 终稿改进初稿的样本数: 1/1 (100.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_drt_MetaphorTrans_en-zh.json
+[Stats] Draft格式正确率: 2/2 (100.0%)
+[Stats] Repair格式正确率: 2/2 (100.0%)
+[Stats] XCOMET Draft scores - Mean: 0.4901, Min: 0.4599, Max: 0.5204
+[Stats] Avg. error spans per draft sample: 4.50
+[Stats] Avg. error spans per final sample: 3.50
+[Stats] XCOMET Final scores - Mean: 0.5491, Min: 0.4444, Max: 0.6538
+[Stats] 终稿改进初稿的样本数: 1/2 (50.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_culturemt_en-zh.json
+[Stats] Draft格式正确率: 773/777 (99.5%)
+[Stats] Repair格式正确率: 0/777 (0.0%)
+[Stats] XCOMET Draft scores - Mean: 0.0000, Min: 0.0000, Max: 0.0000
+[Stats] Avg. error spans per draft sample: 0.00
+[Stats] Avg. error spans per final sample: 0.00
+[Stats] XCOMET Final scores - Mean: 0.0000, Min: 0.0000, Max: 0.0000
+[Stats] 终稿改进初稿的样本数: 0/773 (0.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_culturemt_en-ta.json
+[Stats] Draft格式正确率: 602/677 (88.9%)
+[Stats] Repair格式正确率: 345/677 (51.0%)
+[Stats] XCOMET Draft scores - Mean: 0.3374, Min: -0.0670, Max: 0.9984
+[Stats] Avg. error spans per draft sample: 1.44
+[Stats] Avg. error spans per final sample: 1.45
+[Stats] XCOMET Final scores - Mean: 0.3525, Min: -0.0674, Max: 0.9984
+[Stats] 终稿改进初稿的样本数: 297/551 (53.9%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_commonmt_contextless_syntactic_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 450/450 (100.0%)
+[Stats] Repair格式正确率: 326/450 (72.4%)
+[Stats] XCOMET Draft scores - Mean: 0.9443, Min: 0.4582, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.01
+[Stats] Avg. error spans per final sample: 0.91
+[Stats] XCOMET Final scores - Mean: 0.9526, Min: 0.5405, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 230/433 (53.1%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_commonmt_lexical_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 400/400 (100.0%)
+[Stats] Repair格式正确率: 269/400 (67.2%)
+[Stats] XCOMET Draft scores - Mean: 0.9421, Min: 0.5982, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.06
+[Stats] Avg. error spans per final sample: 0.90
+[Stats] XCOMET Final scores - Mean: 0.9492, Min: 0.5913, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 195/385 (50.6%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_culturemt_en-zh.json
+[Stats] Draft格式正确率: 774/777 (99.6%)
+[Stats] Repair格式正确率: 683/777 (87.9%)
+[Stats] XCOMET Draft scores - Mean: 0.6892, Min: 0.0777, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.52
+[Stats] Avg. error spans per final sample: 3.30
+[Stats] XCOMET Final scores - Mean: 0.7089, Min: 0.0852, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 389/723 (53.8%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_culturemt_en-fr.json
+[Stats] Draft格式正确率: 2071/2073 (99.9%)
+[Stats] Repair格式正确率: 1446/2073 (69.8%)
+[Stats] XCOMET Draft scores - Mean: 0.7181, Min: 0.0071, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.00
+[Stats] Avg. error spans per final sample: 2.59
+[Stats] XCOMET Final scores - Mean: 0.7448, Min: 0.0099, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 942/1749 (53.9%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_culturemt_en-te.json
+[Stats] Draft格式正确率: 707/754 (93.8%)
+[Stats] Repair格式正确率: 509/754 (67.5%)
+[Stats] XCOMET Draft scores - Mean: 0.4763, Min: 0.0017, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.31
+[Stats] Avg. error spans per final sample: 2.34
+[Stats] XCOMET Final scores - Mean: 0.4958, Min: 0.0154, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 351/651 (53.9%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_drt_MetaphorTrans_en-zh.json
+[Stats] Draft格式正确率: 1957/2000 (97.8%)
+[Stats] Repair格式正确率: 1865/2000 (93.2%)
+[Stats] XCOMET Draft scores - Mean: 0.6342, Min: 0.1313, Max: 0.9972
+[Stats] Avg. error spans per draft sample: 3.56
+[Stats] Avg. error spans per final sample: 3.29
+[Stats] XCOMET Final scores - Mean: 0.6517, Min: 0.1325, Max: 0.9972
+[Stats] 终稿改进初稿的样本数: 996/1906 (52.3%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_wmt24_en-ja.json
+[Stats] Draft格式正确率: 991/997 (99.4%)
+[Stats] Repair格式正确率: 664/997 (66.6%)
+[Stats] XCOMET Draft scores - Mean: 0.6619, Min: 0.0639, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.58
+[Stats] Avg. error spans per final sample: 3.00
+[Stats] XCOMET Final scores - Mean: 0.7022, Min: 0.0917, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 389/757 (51.4%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_culturemt_en-es.json
+[Stats] Draft格式正确率: 1580/1580 (100.0%)
+[Stats] Repair格式正确率: 1086/1580 (68.7%)
+[Stats] XCOMET Draft scores - Mean: 0.8284, Min: 0.0804, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.81
+[Stats] Avg. error spans per final sample: 2.39
+[Stats] XCOMET Final scores - Mean: 0.8479, Min: 0.1003, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 713/1334 (53.4%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_wmt24_en-zh.json
+[Stats] Draft格式正确率: 990/997 (99.3%)
+[Stats] Repair格式正确率: 855/997 (85.8%)
+[Stats] XCOMET Draft scores - Mean: 0.7466, Min: 0.1551, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.28
+[Stats] Avg. error spans per final sample: 2.94
+[Stats] XCOMET Final scores - Mean: 0.7612, Min: 0.1294, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 487/935 (52.1%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_wmt23_de-en.json
+[Stats] Draft格式正确率: 549/549 (100.0%)
+[Stats] Repair格式正确率: 376/549 (68.5%)
+[Stats] XCOMET Draft scores - Mean: 0.8735, Min: 0.1373, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.58
+[Stats] Avg. error spans per final sample: 2.29
+[Stats] XCOMET Final scores - Mean: 0.8826, Min: 0.1375, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 265/504 (52.6%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_culturemt_en-hi.json
+[Stats] Draft格式正确率: 1055/1086 (97.1%)
+[Stats] Repair格式正确率: 875/1086 (80.6%)
+[Stats] XCOMET Draft scores - Mean: 0.3941, Min: 0.0233, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 3.75
+[Stats] Avg. error spans per final sample: 3.62
+[Stats] XCOMET Final scores - Mean: 0.4213, Min: 0.0410, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 518/974 (53.2%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_rtt_en-de.json
+[Stats] Draft格式正确率: 500/500 (100.0%)
+[Stats] Repair格式正确率: 438/500 (87.6%)
+[Stats] XCOMET Draft scores - Mean: 0.8614, Min: 0.3392, Max: 0.9984
+[Stats] Avg. error spans per draft sample: 6.10
+[Stats] Avg. error spans per final sample: 5.45
+[Stats] XCOMET Final scores - Mean: 0.8783, Min: 0.3601, Max: 0.9987
+[Stats] 终稿改进初稿的样本数: 247/448 (55.1%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part1/test_baseline_commonmt_contextual_syntactic_ambiguity_zh-en.json
+[Stats] Draft格式正确率: 350/350 (100.0%)
+[Stats] Repair格式正确率: 253/350 (72.3%)
+[Stats] XCOMET Draft scores - Mean: 0.9177, Min: 0.6261, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 1.36
+[Stats] Avg. error spans per final sample: 1.18
+[Stats] XCOMET Final scores - Mean: 0.9224, Min: 0.6805, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 171/335 (51.0%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-4B-part2/test_baseline_wmt23_zh-en.json
+[Stats] Draft格式正确率: 1976/1976 (100.0%)
+[Stats] Repair格式正确率: 1440/1976 (72.9%)
+[Stats] XCOMET Draft scores - Mean: 0.8568, Min: 0.1176, Max: 1.0000
+[Stats] Avg. error spans per draft sample: 2.28
+[Stats] Avg. error spans per final sample: 2.02
+[Stats] XCOMET Final scores - Mean: 0.8655, Min: 0.1348, Max: 1.0000
+[Stats] 终稿改进初稿的样本数: 975/1848 (52.8%)
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-8B/wmt24_en-zh_baseline.json
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-8B/wmt24_en-zh_baseline.json
+[Output] Results saved to /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-8B/test_baseline_wmt24_en-zh_baseline_3.json

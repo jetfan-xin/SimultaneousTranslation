@@ -45,10 +45,8 @@ data/test/GuoFeng_Webnovel_Corpus/
 data/test/LITEVAL-CORPUS/
 data/test/RTT/
 results/*
-results_Qwen2.5_7B/
-results_Qwen2.5-3B/
-results_Qwen2.5-3B_100/
-results_Qwen3-4B/
+data/test/deprecated/
+experiments/results/*
 # 输出结果文件（不提交到GitHub，文件太大）
 # *.json
 # 如果需要提交某些JSON文件，可以使用：git add -f <文件名>
@@ -61,6 +59,7 @@ models/
 
 # 日志文件
 *.log
+.xcomet_all_stats.txt
 
 # 系统文件
 .DS_Store

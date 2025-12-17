@@ -1,90 +1,102 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
+import os
 
-model_name = "Qwen/Qwen2.5-3B-Instruct"
+model_name = "Qwen/Qwen3-4B-Instruct-2507"
 
 # load the tokenizer and the model
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
-    torch_dtype="auto",
+    dtype="auto",
     device_map="auto"
 )
-
 # prepare the model input
 # prompt = "Give me a short introduction to large language model."
 src_lang_name = "English"
 tgt_lang_name = "Chinese"
+tgt_text = "2022年的《泳池戏水》是维森特·西索的又一作品，将于1月13日开始在Tierra del Sol画廊展出。（照片由维森特·西索提供）\n",
 user_input = "\"People Swimming in the Swimming Pool\" from 2022 is one Vicente Siso artwork that will display at Tierra del Sol Gallery beginning Jan. 13. (photo courtesy of Vicente Siso)\n"
 draft_translation = "《人们在游泳池里游泳》（2022年）是Vicente Siso的一件作品，将于2023年初在Tierra del Sol画廊展出。（图片由Vicente Siso提供）"
 error_spans_json = [
-        {
-          "text": "《人们在游泳池里游泳》(2022年",
-          "confidence": 0.4070901572704315,
-          "severity": "major",
-          "start": 0,
-          "end": 17
-        },
-        {
-          "text": "Vicente Siso",
-          "confidence": 0.36560678482055664,
-          "severity": "major",
-          "start": 19,
-          "end": 31
-        },
-        {
-          "text": "一件",
-          "confidence": 0.3505033254623413,
-          "severity": "major",
-          "start": 32,
-          "end": 34
-        },
-        {
-          "text": "2023年初",
-          "confidence": 0.5012103915214539,
-          "severity": "major",
-          "start": 39,
-          "end": 45
-        },
-        {
-          "text": "Tierra del Sol",
-          "confidence": 0.35400378704071045,
-          "severity": "major",
-          "start": 46,
-          "end": 60
-        }
-      ]
+    {
+      "text": "《人们在游泳池里游泳》(2022年",
+      "severity": "major"
+    },
+    {
+      "text": "Vicente Siso",
+      "severity": "major"
+    },
+    {
+      "text": "一件",
+      "severity": "major"
+    },
+    {
+      "text": "2023年初",
+      "severity": "major"
+    },
+    {
+      "text": "Tierra del Sol",
+      "severity": "major"
+    }
+]
 
-prefix = f"""A conversation between User and Assistant. The User asks for a translation from {src_lang_name} to {tgt_lang_name}, and the Assistant translates it. The final translation are enclosed within <translate> </translate> tags, i.e., <translate> final translation here </translate>. \n\nUser:{user_input}\nAssistant:"""
-    
+
+prefix = f"""A conversation between User and Assistant. 
+The User asks the Assistant to polish a draft translation from {src_lang_name} to {tgt_lang_name}.
+The draft translation corresponds to a source text. The Assistant refines it using the source text and the error evaluation.
+
+Assistant's task:
+1) Think briefly about the corrections needed.  
+   - Keep your internal thinking extremely concise.  
+   - List ONLY key fixes.  
+   - DO NOT write long reasoning.
+2) Produce the polished translation only.
+
+The Assistent provides the polished translation enclosed within <translate> </translate> tags, i.e., <translate> polished translation here </translate>.
+
+User: {user_input}
+Draft Translation: {draft_translation}
+Error Evaluation: {error_spans_json}
+Assistant:"""
+
+
+prefix_2 = f"""A conversation between User and Assistant. The User asks for polishing a draft translation from {src_lang_name} to {tgt_lang_name}.
+The draft translation is a translation for a source text. The Assistant needs to polish this draft translation based on the source text and the error evaluation.
+
+The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation.
+
+The reasoning process and polished translation are enclosed within [think] [/think] and <translate> </translate> tags, respectively, i.e., [think] reasoning process here [/think] <translate> polished translation here </translate>.
+
+User: {user_input}
+Draft Translation: {draft_translation}
+Error Evaluation: {error_spans_json}
+Assistant:"""
+
 messages = [
-    {"role": "user", "content": prefix}
+    {"role": "user", "content": prefix_2}
 ]
 for i in range(10):
     text = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
         add_generation_prompt=True,
-        enable_thinking=False # Switches between thinking and non-thinking modes. Default is True.
+        # enable_thinking=False # Switches between thinking and non-thinking modes. Default is True.
     )
     model_inputs = tokenizer([text], return_tensors="pt").to(model.device)
 
     # conduct text completion
     generated_ids = model.generate(
         **model_inputs,
-        max_new_tokens=2048
+        max_new_tokens=4096
     )
     output_ids = generated_ids[0][len(model_inputs.input_ids[0]):].tolist() 
-
-    # # parsing thinking content
-    # try:
-    #     # rindex finding 151668 (</think>)
-    #     index = len(output_ids) - output_ids[::-1].index(151668)
-    # except ValueError:
-    #     index = 0
 
     answer = tokenizer.decode(output_ids, skip_special_tokens=True).strip("\n")
 
     print(f"[{i}] 完整输出:", answer)
+
+
+
 
 
 '''

@@ -117,6 +117,7 @@ class XCOMETLoader:
             # src和mt必须存在，ref是可选的
             if src and mt:
                 valid_triplets.append(triplet)
+                # print(f"[WORD-QE] Valid sample: {triplet} ")
                 valid_indices.append(idx)
             else:
                 print(f"[WORD-QE] Warning: 跳过无效样本 {idx} (src或mt为空)")

@@ -17,6 +17,7 @@ import os
 import sys
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import List, Dict, Optional
 from tqdm import tqdm
@@ -34,7 +35,7 @@ from data.process_data import read_jsonl_files, make_prefix
 from transformers import AutoTokenizer
 from xcomet_loader import XCOMETLoader
 from qwen_generator import QwenGenerator
-from utils import check_and_extract_translate_tag, format_error_spans_for_prompt, split_into_segments
+from utils import split_into_segments, check_and_extract_translate_tag
 
 def _parse_gpu_list(gpu_str: Optional[str]) -> List[int]:
     """把类似 '0,1,4' 的字符串转成 [0,1,4]，None 或 '' 返回空列表。"""
@@ -118,6 +119,18 @@ def log_stats(msg: str, output_file: str = None):
     # 追加写入
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(msg + "\n")
+
+
+def extract_translation_from_output(text: str) -> str:
+    """
+    提取启用thinking模式后的翻译内容：
+    - 移除<think>...</think>，返回剩余部分。
+    """
+    if not text or not isinstance(text, str):
+        return ""
+
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.IGNORECASE | re.DOTALL)
+    return cleaned.strip()
         
 def load_dataset_from_test_files(test_files: List[str], base_dir: str = None):
     """
@@ -214,15 +227,15 @@ def main():
     parser = argparse.ArgumentParser(description='SimultaneousTranslation主脚本')
     
     # 数据集相关参数
-    parser.add_argument('--data_dir', type=str, default='data/test/used', help='数据根目录（默认项目根目录下的 data）')
+    parser.add_argument('--data_dir', type=str, default='data', help='数据根目录（默认项目根目录下的 data）')
     parser.add_argument(
         '--test_files',
         nargs='+',
         default=None,
-        help='（可选）要使用的数据集文件名，位于 data_dir 下；'
-             '如果不指定，将自动扫描 data_dir 目录下所有 *.parquet / *.jsonl'
+        help='（可选）要使用的数据集文件名，位于 data/test/used 下；'
+             '如果不指定，将自动扫描 data/test/used 目录下所有 *.parquet / *.jsonl'
     )
-    parser.add_argument('--tokenizer_path', type=str, default='Qwen/Qwen3-8B',
+    parser.add_argument('--tokenizer_path', type=str, default='Qwen/Qwen3-4B',
                        help='Tokenizer路径或HuggingFace模型ID')
     parser.add_argument('--pipeline_mode', type=str, choices=['baseline', 'extended'], default='baseline',
                        help='处理流程模式：baseline或extended（短句级refinement）')
@@ -238,7 +251,7 @@ def main():
                        help='XCOMET使用的GPU编号，如"0,1"（默认：自动分配）')
     
     # Qwen模型相关参数
-    parser.add_argument('--qwen_model_path', type=str, default='Qwen/Qwen3-8B',
+    parser.add_argument('--qwen_model_path', type=str, default='Qwen/Qwen3-4B',
                        help='Qwen模型路径或HuggingFace模型ID')
     parser.add_argument('--use_vllm', action='store_true', default=True,
                        help='是否使用vllm进行推理（推荐）')
@@ -254,8 +267,7 @@ def main():
                        help='vLLM并发序列上限，减小可降低warm-up显存压力（默认64）')
     
     # 生成参数（参考 test_time/vllm_infer.py 的配置）
-    parser.add_argument('--max_tokens_draft', type=int, default=2048, help='初稿最大生成token数（test_time: 2048）')
-    parser.add_argument('--max_tokens_repair', type=int, default=4096, help='润色最大生成token数（test_time: 2048）')
+    parser.add_argument('--max_tokens', type=int, default=2048, help='最大生成token数（test_time: 2048）')
     parser.add_argument('--temperature', type=float, default=0.2, help='采样温度（test_time: 0.2）')
     parser.add_argument('--top_p', type=float, default=0.95, help='nucleus sampling参数（test_time: 0.95）')
     parser.add_argument('--batch_size', type=int, default=16, help='批处理大小（test_time: 16）')
@@ -266,9 +278,21 @@ def main():
     # 输入/输出参数
     parser.add_argument('--output_file', type=str, default=None,
                        help='输出文件路径（JSON格式，保存生成结果）')
+    parser.add_argument('--reuse_results', action='store_true', default=False,
+                       help='检测到已有结果文件时复用其中的draft_generated_text，跳过初稿生成')
+    parser.add_argument('--results_dir', type=str, default=None,
+                       help='已有结果JSON所在目录（用于 --reuse_results 自动匹配 test_<pipeline_mode>_<数据集名>.json）')
     
     args = parser.parse_args()
     extended_mode = args.pipeline_mode == 'extended'
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    resolved_output_file = None
+    if args.output_file:
+        resolved_output_file = (
+            args.output_file
+            if os.path.isabs(args.output_file)
+            else os.path.join(root_dir, args.output_file)
+        )
 
     # ===== 统一解析 GPU 参数：把物理 id → 逻辑 id =====
     # 注意：这里不改 CUDA_VISIBLE_DEVICES，只是做一个“解释层”。
@@ -330,9 +354,8 @@ def main():
     print("="*60)
 
     # data_dir 仍然是项目根目录下的 data
-    root_dir = os.path.dirname(os.path.abspath(__file__))
     data_dir = args.data_dir if os.path.isabs(args.data_dir) else os.path.join(root_dir, args.data_dir)
-    used_dir = Path(data_dir)
+    used_dir = Path(data_dir) / "test" / "used"
 
     if not used_dir.exists():
         raise FileNotFoundError(f"测试数据目录不存在: {used_dir}")
@@ -341,7 +364,7 @@ def main():
     if args.test_files:
         test_files = [str(used_dir / f) for f in args.test_files]
     else:
-        # 2）否则自动扫描 data_dir 目录：
+        # 2）否则自动扫描 data/test/used 目录：
         #    - 如果有 *.parquet，就全部用 parquet
         #    - 否则用所有 *.jsonl
         parquet_candidates = sorted(used_dir.glob("*.parquet"))
@@ -359,6 +382,52 @@ def main():
     print(f"[Dataset] 使用的文件列表：")
     for p in test_files:
         print(f"  - {p}")
+
+    # ========== 结果文件复用检测 ==========
+    reuse_results_data: List[Dict] = []
+    reuse_result_paths: List[str] = []
+    results_dir = None
+    if args.results_dir:
+        results_dir = (
+            args.results_dir
+            if os.path.isabs(args.results_dir)
+            else os.path.join(root_dir, args.results_dir)
+        )
+
+    if args.reuse_results or results_dir:
+        candidate_paths = []
+        if resolved_output_file and os.path.exists(resolved_output_file):
+            candidate_paths.append(Path(resolved_output_file))
+        if results_dir:
+            for p in test_files:
+                candidate_name = f"test_{args.pipeline_mode}_{Path(p).stem}.json"
+                candidate_path = Path(results_dir) / candidate_name
+                if candidate_path.exists():
+                    candidate_paths.append(candidate_path)
+                    print(f"[Reuse] Found candidate result file for reuse: {candidate_path}")
+
+        seen_paths = set()
+        for c_path in candidate_paths:
+            abs_path = str(Path(c_path).resolve())
+            if abs_path in seen_paths:
+                continue
+            seen_paths.add(abs_path)
+            try:
+                with open(c_path, "r", encoding="utf-8") as f:
+                    loaded = json.load(f)
+                if isinstance(loaded, list):
+                    reuse_results_data.extend(loaded)
+                    reuse_result_paths.append(str(c_path))
+                    print(f"reuse_result_paths: {reuse_result_paths}")
+                else:
+                    print(f"[Reuse] {c_path} 的内容不是列表，跳过。")
+            except Exception as e:
+                print(f"[Reuse] 加载 {c_path} 失败: {e}")
+
+        if reuse_result_paths:
+            print(f"[Reuse] 发现已有结果文件，将复用: {reuse_result_paths}")
+        elif args.reuse_results:
+            print("[Reuse] 未找到可复用的结果文件，继续完整流程。")
 
     # ========== 2. 转换数据集为Qwen格式并生成prompt ==========
     print("\n" + "="*60)
@@ -538,21 +607,46 @@ def main():
         )
         
     # ========== 阶段式处理：先完成所有阶段的所有数据，再进入下一阶段 ==========
-    dataset_df = dataset.to_pandas()
-    num_samples = len(dataset_df)
+    results: List[Dict] = []
+    using_cached_results = False
+    if reuse_results_data:
+        print("\n[Stage] 复用已有结果文件，跳过初稿生成阶段")
+        results = [dict(r) for r in reuse_results_data]
+        for idx, r in enumerate(results):
+            r["index"] = idx
+            r.setdefault("data_source", r.get("data_source", "unknown"))
+            r.setdefault("lang_pair", r.get("lang_pair") or r.get("lg") or "unknown-unknown")
+            r.setdefault("src_text", r.get("src_text", ""))
+            r.setdefault("tgt_text", r.get("tgt_text", ""))
+            r.setdefault("draft_prompt", r.get("draft_prompt") or r.get("prompt"))
+            if not r.get("draft_translation") and r.get("draft_generated_text") is not None:
+                r["draft_translation"] = r.get("draft_generated_text")
+            if r.get("draft_translation") or r.get("draft_generated_text"):
+                r["draft_format_score"] = 1
+            r.setdefault("draft_segments", [])
+            r.setdefault("draft_segment_results", [])
+            r.setdefault("repair_segment_outputs", [])
+            r.setdefault("final_segments", [])
+            r.setdefault("repair_segment_prompts", [])
+            r.setdefault("repair_segment_format_scores", [])
+        dataset_df = pd.DataFrame(results)
+        num_samples = len(results)
+        using_cached_results = True
+    else:
+        dataset_df = dataset.to_pandas()
+        num_samples = len(dataset_df)
+        results = []
+        for _, row in dataset_df.iterrows():
+            results.append({
+                "index": int(row['index']),
+                "data_source": row['data_source'],
+                "lang_pair": row['lang_pair'],
+                "src_text": row['src_text'],
+                "tgt_text": row['tgt_text'],
+                "draft_prompt": row['prompt'],
+            })
+
     print(f"\n[Stage] 开始阶段式处理，共 {num_samples} 个样本")
-    
-    # 初始化所有结果
-    results = []
-    for _, row in dataset_df.iterrows():
-        results.append({
-            "index": int(row['index']),
-            "data_source": row['data_source'],
-            "lang_pair": row['lang_pair'],
-            "src_text": row['src_text'],
-            "tgt_text": row['tgt_text'],
-            "draft_prompt": row['prompt'],
-        })
         
     if extended_mode:
         # ========== 扩展模式流程 ==========
@@ -562,58 +656,55 @@ def main():
         print("阶段1: 批量生成完整原文的初稿翻译")
         print("="*60)
 
-        # 收集所有完整原文的prompt
-        draft_prompts: List[str] = [r["draft_prompt"] for r in results]
+        if using_cached_results:
+            print("[Reuse] 已有 draft_generated_text，跳过初稿生成。")
+            for idx in range(num_samples):
+                if not results[idx].get("draft_translation") and results[idx].get("draft_generated_text") is not None:
+                    results[idx]["draft_translation"] = results[idx]["draft_generated_text"]
+                if results[idx].get("draft_translation") is None:
+                    results[idx]["draft_translation"] = ""
+        else:
+            # 收集所有完整原文的prompt
+            draft_prompts: List[str] = [r["draft_prompt"] for r in results]
 
-        # 批量生成所有完整原文的初稿
-        all_draft_generated_texts: List[str] = []
-        for i in tqdm(range(0, len(draft_prompts), args.batch_size), desc="生成完整初稿"):
-            batch_prompts = draft_prompts[i:i + args.batch_size]
-            try:
-                generated_texts = qwen_generator.generate_draft(
-                    batch_prompts,
-                    mode="draft",
-                    max_tokens=args.max_tokens_draft,
-                    temperature=args.temperature,
-                    top_p=args.top_p,
-                )
-                if isinstance(generated_texts, str):
-                    generated_texts = [generated_texts]
-                if len(generated_texts) != len(batch_prompts):
-                    print(
-                        f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch_prompts)})不匹配"
+            # 批量生成所有完整原文的初稿
+            all_draft_generated_texts: List[str] = []
+            for i in tqdm(range(0, len(draft_prompts), args.batch_size), desc="生成完整初稿"):
+                batch_prompts = draft_prompts[i:i + args.batch_size]
+                try:
+                    generated_texts = qwen_generator.generate_draft(
+                        batch_prompts,
+                        mode="draft",
+                        max_tokens=args.max_tokens,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
                     )
-                    generated_texts = list(generated_texts) + [""] * (
-                        len(batch_prompts) - len(generated_texts)
-                    )
-            except Exception as e:
-                print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
-                import traceback
+                    if isinstance(generated_texts, str):
+                        generated_texts = [generated_texts]
+                    if len(generated_texts) != len(batch_prompts):
+                        print(
+                            f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch_prompts)})不匹配"
+                        )
+                        generated_texts = list(generated_texts) + [""] * (
+                            len(batch_prompts) - len(generated_texts)
+                        )
+                except Exception as e:
+                    print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
+                    import traceback
 
-                traceback.print_exc()
-                generated_texts = [""] * len(batch_prompts)
+                    traceback.print_exc()
+                    generated_texts = [""] * len(batch_prompts)
 
-            all_draft_generated_texts.extend(generated_texts)
+                all_draft_generated_texts.extend(generated_texts)
 
-        # 保存每个样本的完整初稿生成结果
-        for idx in range(num_samples):
-            if idx < len(all_draft_generated_texts):
-                results[idx]["draft_generated_text"] = all_draft_generated_texts[idx]
-            else:
-                results[idx]["draft_generated_text"] = ""
-
-        # ========== 阶段2：对所有初稿进行格式检查，提取<translate>标签中的内容 ==========
-        print("\n" + "="*60)
-        print("阶段2: 对所有初稿进行格式检查，提取<translate>标签中的内容")
-        print("="*60)
-
-        for idx in tqdm(range(num_samples), desc="检查初稿格式"):
-            draft_text = results[idx].get("draft_generated_text", "")
-            format_valid, draft_translation, format_score = check_and_extract_translate_tag(
-                draft_text
-            )
-            results[idx]["draft_format_score"] = format_score
-            results[idx]["draft_translation"] = draft_translation if format_valid else None
+            # 保存每个样本的完整初稿生成结果，不对初稿进行格式检查，直接使用生成内容
+            for idx in range(num_samples):
+                if idx < len(all_draft_generated_texts):
+                    results[idx]["draft_generated_text"] = all_draft_generated_texts[idx]
+                    results[idx]["draft_translation"] = all_draft_generated_texts[idx]
+                else:
+                    results[idx]["draft_generated_text"] = ""
+                    results[idx]["draft_translation"] = ""
 
         # ========== 阶段3：把完整的初稿翻译切分为初稿短句 ==========
         print("\n" + "="*60)
@@ -776,7 +867,7 @@ def main():
                     repair_texts = qwen_generator.generate_draft(
                         batch_prompts,
                         mode="repair",
-                        max_tokens=args.max_tokens_repair,
+                        max_tokens=args.max_tokens,
                         temperature=args.temperature,
                         top_p=args.top_p,
                     )
@@ -806,19 +897,8 @@ def main():
                     continue
                 repair_text = all_repair_generated_texts[prompt_idx]
                 results[sample_idx]["repair_segment_outputs"][segment_idx] = repair_text
-                valid, final_text, format_score = check_and_extract_translate_tag(repair_text)
-                if valid and final_text:
-                    results[sample_idx]["final_segments"][segment_idx] = final_text
-                    results[sample_idx]["repair_segment_format_scores"][segment_idx] = format_score
-                else:
-                    # 回退到初稿短句
-                    draft_seg = (
-                        results[sample_idx]["draft_segments"][segment_idx]
-                        if segment_idx < len(results[sample_idx]["draft_segments"])
-                        else None
-                    )
-                    results[sample_idx]["final_segments"][segment_idx] = draft_seg
-                    results[sample_idx]["repair_segment_format_scores"][segment_idx] = 0
+                repair_translation = extract_translation_from_output(repair_text)
+                results[sample_idx]["final_segments"][segment_idx] = repair_translation
 
         # ========== 阶段6：汇总终稿短句 ==========
         print("\n" + "="*60)
@@ -943,53 +1023,50 @@ def main():
         print("阶段1: 批量生成所有数据的初稿")
         print("="*60)
 
-        all_draft_generated_texts = []
-        for i in tqdm(range(0, num_samples, args.batch_size), desc="生成初稿"):
-            batch = dataset_df.iloc[i:i + args.batch_size]
-            prompts = batch["prompt"].tolist()
+        if using_cached_results:
+            print("[Reuse] 已有 draft_generated_text，跳过初稿生成。")
+            for idx in range(num_samples):
+                if not results[idx].get("draft_translation") and results[idx].get("draft_generated_text") is not None:
+                    results[idx]["draft_translation"] = results[idx]["draft_generated_text"]
+                if results[idx].get("draft_translation") or results[idx].get("draft_generated_text"):
+                    results[idx]["draft_format_score"] = 1
+        else:
+            all_draft_generated_texts = []
+            for i in tqdm(range(0, num_samples, args.batch_size), desc="生成初稿"):
+                batch = dataset_df.iloc[i:i + args.batch_size]
+                prompts = batch["prompt"].tolist()
 
-            try:
-                generated_texts = qwen_generator.generate_draft(
-                    prompts,
-                    mode="draft",
-                    max_tokens=args.max_tokens_draft,
-                    temperature=args.temperature,
-                    top_p=args.top_p,
-                )
-                if isinstance(generated_texts, str):
-                    generated_texts = [generated_texts]
-                if len(generated_texts) != len(batch):
-                    print(
-                        f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch)})不匹配，使用空字符串填充"
+                try:
+                    generated_texts = qwen_generator.generate_draft(
+                        prompts,
+                        mode="draft",
+                        max_tokens=args.max_tokens,
+                        temperature=args.temperature,
+                        top_p=args.top_p,
                     )
-                    generated_texts = list(generated_texts) + [""] * (
-                        len(batch) - len(generated_texts)
-                    )
-            except Exception as e:
-                print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
-                import traceback
+                    if isinstance(generated_texts, str):
+                        generated_texts = [generated_texts]
+                    if len(generated_texts) != len(batch):
+                        print(
+                            f"[Warning] 生成文本数量({len(generated_texts)})与批次大小({len(batch)})不匹配，使用空字符串填充"
+                        )
+                        generated_texts = list(generated_texts) + [""] * (
+                            len(batch) - len(generated_texts)
+                        )
+                except Exception as e:
+                    print(f"\n[Error] Generation failed for batch starting at index {i}: {e}")
+                    import traceback
 
-                traceback.print_exc()
-                generated_texts = [""] * len(batch)
+                    traceback.print_exc()
+                    generated_texts = [""] * len(batch)
 
-            all_draft_generated_texts.extend(generated_texts)
+                all_draft_generated_texts.extend(generated_texts)
 
-        # 保存初稿生成结果
-        for idx, draft_text in enumerate(all_draft_generated_texts):
-            results[idx]["draft_generated_text"] = draft_text
+            # 保存初稿生成结果
+            for idx, draft_text in enumerate(all_draft_generated_texts):
+                results[idx]["draft_generated_text"] = draft_text
+                results[idx]["draft_translation"] = draft_text # 初稿翻译保存为完整生成文本
 
-        # ========== 阶段2：对所有初稿进行格式检查 ==========
-        print("\n" + "="*60)
-        print("阶段2: 对所有初稿进行格式检查")
-        print("="*60)
-
-        for idx in tqdm(range(num_samples), desc="检查初稿格式"):
-            draft_text = results[idx]["draft_generated_text"]
-            format_valid, draft_translation, format_score = check_and_extract_translate_tag(
-                draft_text
-            )
-            results[idx]["draft_format_score"] = format_score
-            results[idx]["draft_translation"] = draft_translation if format_valid else None
 
         # ========== 阶段3：对所有初稿翻译进行XCOMET评分 ==========
         print("\n" + "="*60)
@@ -1114,11 +1191,7 @@ def main():
 
             # 情况1：如果没有初稿，跳过refinement
             if not draft_translation:
-                results[idx]["xcomet_final"] = {
-                        "score": None,
-                        "error_spans": [],
-                        "error": "Draft translation is empty",
-                    }
+                continue
 
             # 情况2：有初稿但无错误，跳过refinement，直接使用初稿
             elif format_valid and draft_translation and (not error_spans or len(error_spans) == 0):
@@ -1147,7 +1220,6 @@ def main():
                         f"[Warning] 构建repair prompt失败 for sample {results[idx]['index']}: {str(e)[:100]}"
                     )
 
-
         # 批量生成repair翻译
         if repair_prompts:
             all_repair_generated_texts = []
@@ -1159,7 +1231,7 @@ def main():
                     repair_texts = qwen_generator.generate_draft(
                         batch_prompts,
                         mode="repair",
-                        max_tokens=args.max_tokens_repair,
+                        max_tokens=args.max_tokens,
                         temperature=args.temperature,
                         top_p=args.top_p,
                     )
@@ -1187,32 +1259,8 @@ def main():
             for prompt_idx, result_idx in enumerate(repair_indices):
                 repair_text = all_repair_generated_texts[prompt_idx]
                 results[result_idx]["repair_generated_text"] = repair_text
-
-        # ========== 阶段5：对所有终稿进行格式检查 ==========
-        print("\n" + "="*60)
-        print("阶段5: 对所有终稿进行格式检查")
-        print("="*60)
-
-        for idx in tqdm(range(num_samples), desc="检查终稿格式"):
-            # 有初稿、无错误，直接使用初稿，不需要额外格式检查
-            if (
-                results[idx].get("final_translation") is not None
-                and results[idx].get("repair_generated_text") is None
-            ):
-                results[idx]["repair_format_score"] = 0
-                continue
-
-            repair_generated_text = results[idx].get("repair_generated_text")
-            if repair_generated_text:
-                (
-                    repair_format_valid,
-                    final_translation,
-                    repair_format_score,
-                ) = check_and_extract_translate_tag(repair_generated_text)
-                results[idx]["repair_format_score"] = repair_format_score
-                results[idx]["final_translation"] = (
-                    final_translation if repair_format_valid else None
-                )
+                repair_translation = extract_translation_from_output(repair_text)
+                results[result_idx]["final_translation"] = repair_translation
 
         # ========== 阶段6：对所有终稿翻译进行XCOMET评分 ==========
         print("\n" + "="*60)
@@ -1240,12 +1288,6 @@ def main():
                             {"src": src_text, "mt": final_translation, "ref": ref_text}
                         )
                         final_xcomet_indices.append(idx)
-                else:
-                    results[idx]["xcomet_final"] = {
-                        "score": None,
-                        "error_spans": [],
-                        "error": "Repaired translation format invalid",
-                    }
 
             if final_xcomet_triplets:
                 try:
@@ -1285,7 +1327,6 @@ def main():
                             }
             else:
                 print("[XCOMET] 没有需要评分的终稿翻译")
-
         else:
             print("[XCOMET] 未加载，跳过终稿评分")
             for idx in range(num_samples):
@@ -1302,9 +1343,7 @@ def main():
         print("\n" + "="*60)
         print("步骤5: 保存结果")
         print("="*60)
-        output_path = args.output_file if os.path.isabs(args.output_file) else os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), args.output_file
-        )
+        output_path = resolved_output_file
         
         # 保存为JSON
         output_txt = "xcomet_all_stats.txt"
@@ -1312,6 +1351,88 @@ def main():
             json.dump(results, f, ensure_ascii=False, indent=2)
         log_stats(f"[Output] Results saved to {output_path}", output_file=output_txt)
         
+        # 打印统计信息
+        draft_format_scores = [r.get('draft_format_score', 0) for r in results]
+        repair_format_scores = [r.get('repair_format_score', 0) for r in results]
+        draft_valid_count = sum(draft_format_scores)
+        repair_valid_count = sum(repair_format_scores)
+
+        
+        num_samples = len(results)
+        log_stats(
+            f"[Stats] Draft格式正确率: {draft_valid_count}/{num_samples} ({100*draft_valid_count/num_samples:.1f}%)",
+            output_file=output_txt,
+        )
+        log_stats(
+            f"[Stats] Repair格式正确率: {repair_valid_count}/{num_samples} ({100*repair_valid_count/num_samples:.1f}%)",
+            output_file=output_txt,
+        )
+
+        if xcomet_loader:
+            # XCOMET统计（初稿）
+            draft_scores = [
+                r.get('xcomet_draft', {}).get('score')
+                for r in results
+                if r.get('xcomet_draft') and r['xcomet_draft'].get('score') is not None
+            ]
+            if draft_scores:
+                log_stats(
+                    "[Stats] XCOMET Draft scores - "
+                    f"Mean: {sum(draft_scores)/len(draft_scores):.4f}, "
+                    f"Min: {min(draft_scores):.4f}, Max: {max(draft_scores):.4f}",
+                    output_file=output_txt,
+                )
+
+            draft_error_span_counts = [
+                len(r.get('xcomet_draft', {}).get('error_spans', []))
+                for r in results
+                if r.get('xcomet_draft')
+            ]
+            if draft_error_span_counts:
+                avg_draft_spans = sum(draft_error_span_counts) / len(draft_error_span_counts)
+                log_stats(
+                    f"[Stats] Avg. error spans per draft sample: {avg_draft_spans:.2f}",
+                    output_file=output_txt,
+                )
+
+            # 终稿错误spans统计
+            final_error_span_counts = [
+                len(r.get('xcomet_final', {}).get('error_spans', []))
+                for r in results
+                if r.get('xcomet_final')
+            ]
+            if final_error_span_counts:
+                avg_final_spans = sum(final_error_span_counts) / len(final_error_span_counts)
+                log_stats(
+                    f"[Stats] Avg. error spans per final sample: {avg_final_spans:.2f}",
+                    output_file=output_txt,
+                )
+
+            # XCOMET统计（终稿）
+            final_scores = [
+                r.get('xcomet_final', {}).get('score')
+                for r in results
+                if r.get('xcomet_final') and r['xcomet_final'].get('score') is not None
+            ]
+            if final_scores:
+                log_stats(
+                    "[Stats] XCOMET Final scores - "
+                    f"Mean: {sum(final_scores)/len(final_scores):.4f}, "
+                    f"Min: {min(final_scores):.4f}, Max: {max(final_scores):.4f}",
+                    output_file=output_txt,
+                )
+
+            # 改进统计（注意：这里最好用 paired，而不是 zip 两个 list，
+            # 不过你目前 draft/final 是一一对应的也可以先这样用）
+            if draft_scores and final_scores:
+                improved_count = sum(
+                    1 for d, f in zip(draft_scores, final_scores) if f and d and f > d
+                )
+                log_stats(
+                    f"[Stats] 终稿改进初稿的样本数: {improved_count}/{len(final_scores)} "
+                    f"({100*improved_count/len(final_scores):.1f}%)",
+                    output_file=output_txt,
+                )
     print("\n" + "="*60)
     print("完成！")
     print("="*60)
@@ -1321,4 +1442,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -62,8 +62,12 @@ def make_prefix(example, template_type, st_mode=None, tokenizer=None, **kwargs):
         prefix = f"""A conversation between User and Assistant. The User asks for a translation from {src_lang_name} to {tgt_lang_name}, and the Assistant translates it. The final translation are enclosed within <translate> </translate> tags, i.e., <translate> final translation here </translate>. \n\nUser:{user_input}\nAssistant:"""
     elif template_type == 'draft':
         # Draft mode 复制rl模式，不think，直接translate
-        prefix = f"""A conversation between User and Assistant. The User asks for a translation from {src_lang_name} to {tgt_lang_name}, and the Assistant translates it. The final translation are enclosed within <translate> </translate> tags, i.e., <translate> final translation here </translate>. \n\nUser:{user_input}\nAssistant:"""
-    
+        prefix = f"""A conversation between User and Assistant. 
+The User requests a translation from {src_lang_name} to {tgt_lang_name}, and the Assistant translates it.
+The Assistent provides the translation enclosed within <translate> </translate> tags, i.e., <translate> translation here </translate>. 
+
+User: {user_input}
+Assistant:"""
     elif template_type == 'repair':
         draft_translation = kwargs.get('draft_translation', '')  # 初稿
         error_spans = kwargs.get('error_spans', [])  # 直接获取error_spans列表
@@ -83,12 +87,48 @@ def make_prefix(example, template_type, st_mode=None, tokenizer=None, **kwargs):
             error_spans_json = "[]"
         if st_mode == 'baseline':
             # Baseline repair mode：只包含完整原文(src_text)和完整初稿(draft_translation)
-            prefix = f"""A conversation between User and Assistant. The User asks for polishing a draft translation from {src_lang_name} to {tgt_lang_name}. The draft translation is a translation for a source text. The Assistant needs to polish this draft translation based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation. The reasoning process and polished translation are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation here </translate>. \n\nUser: {user_input}\nDraft Translation: {draft_translation}\nError Evaluation: {error_spans_json}\nAssistant:"""
+            # prefix = f"""A conversation between User and Assistant. The User asks for polishing a draft translation from {src_lang_name} to {tgt_lang_name}. The draft translation is a translation for a source text. The Assistant needs to polish this draft translation based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation. The reasoning process and polished translation are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation here </translate>. \n\nUser: {user_input}\nDraft Translation: {draft_translation}\nError Evaluation: {error_spans_json}\nAssistant:"""
+            prefix = f"""A conversation between User and Assistant. 
+The User asks the Assistant to polish a draft translation from {src_lang_name} to {tgt_lang_name}. 
+The draft translation corresponds to a source text. The Assistant refines it using the source text and the error evaluation.
+
+Assistant's task:
+1) Think briefly about the corrections needed.  
+   - Keep your internal thinking extremely concise.  
+   - List ONLY key fixes.  
+   - DO NOT write long reasoning.  
+   - At most 3 short bullet points.  
+2) Produce the polished translation only.
+
+The Assistent provides the polished translation enclosed within <translate> </translate> tags, i.e., <translate> polished translation here </translate>.
+
+User: {user_input}
+Draft Translation: {draft_translation}
+Error Evaluation: {error_spans_json}
+Assistant:"""
         elif st_mode == 'extended':
             # Repair mode：润色一个初稿短句
             # 包含：完整原文(src_text)、初稿短句(draft_translation)、错误spans
-            prefix = f"""A conversation between User and Assistant. The User asks for polishing a draft translation segment from {src_lang_name} to {tgt_lang_name}. The draft translation segment is part of a translation for a source text. The Assistant needs to polish this draft translation segment based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: {user_input}\nDraft Translation Segment: {draft_translation}\nError Evaluation: {error_spans_json}\nAssistant:"""
-        
+            # prefix = f"""A conversation between User and Assistant. The User asks for polishing a draft translation segment from {src_lang_name} to {tgt_lang_name}. The draft translation segment is part of a translation for a source text. The Assistant needs to polish this draft translation segment based on the source text and the error evaluation. The Assistant first thinks about the reasoning process in the mind and then provides the user with the polished translation segment. The reasoning process and polished translation segment are enclosed within <think> </think> and <translate> </translate> tags, respectively, i.e., <think> reasoning process here </think> <translate> polished translation segment here </translate>. \n\nUser: {user_input}\nDraft Translation Segment: {draft_translation}\nError Evaluation: {error_spans_json}\nAssistant:"""
+            prefix = f"""A conversation between User and Assistant. 
+The User asks the Assistant to polish a draft translation segment from {src_lang_name} to {tgt_lang_name}. 
+The draft translation segment corresponds to a source text segment, which is part of a longer translation for a source text. The Assistant refines it using the source text segment and the error evaluation for this segment.
+
+Assistant's task:
+1) Think briefly about the corrections needed for this segment.
+   - Keep your internal thinking extremely concise.  
+   - List ONLY key fixes.
+   - DO NOT write long reasoning.  
+   - At most 3 short bullet points.  
+2) Produce the polished translation segment only.
+
+The Assistent provides the polished translation segment enclosed within <translate> </translate> tags, i.e., <translate> polished translation segment here </translate>.
+
+User: {user_input}
+Draft Translation Segment: {draft_translation}
+Error Evaluation: {error_spans_json}
+Assistant:"""
+            
     return prefix
 
 def preprocess_data(data): # deprecated
@@ -156,7 +196,7 @@ def main():
     parser = argparse.ArgumentParser(description='Prepare translation dataset')
     parser.add_argument('--train_files', nargs='+', default=['train/train_zhen_6565.jsonl', 'train/train_enzh_6565.jsonl'], help='Training JSONL files')
     parser.add_argument('--test_files', nargs='+', default=['test/wmt23_zhen.jsonl', 'test/wmt24_enzh.jsonl'], help='Test JSONL files')
-    parser.add_argument('--tokenizer_path', type=str, default='../Qwen2.5-3B-Instruct', help='Path to the tokenizer')
+    parser.add_argument('--tokenizer_path', type=str, default='../Qwen3-8B', help='Path to the tokenizer')
     parser.add_argument('--template_type', type=str, choices=['base', 'chat', 'rl', 'draft', 'repair'], default='chat', help='Template type for prompts. draft mode uses base template.')
     parser.add_argument('--train_sample_size', type=int, default=10000000, help='Number of training samples to use')
     parser.add_argument('--test_sample_size', type=int, default=10000000, help='Number of test samples to use')

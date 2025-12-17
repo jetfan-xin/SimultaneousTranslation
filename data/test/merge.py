@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 
 # 结果文件所在目录
-ROOT = Path("/ltstorage/home/4xin/SimultaneousTranslation/results_Qwen2.5-3B_100")
+ROOT = Path("/ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-8B")
 all_data = pd.DataFrame()
 
 

@@ -1,0 +1,118 @@
+[
+  {
+    "case_id": "Case31",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 5,
+        "end": 22,
+        "text": "一条非常短的推文，几乎没有任何内容",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case32",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 2,
+        "end": 22,
+        "text": "丑陋而恐怖的地方，每年把所有游客都吓跑了",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case33",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 4,
+        "end": 16,
+        "text": "虚假且由电脑合成的新镜头",
+        "error_type": "factual"
+      },
+      {
+        "start": 19,
+        "end": 22,
+        "text": "虚构的",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case34",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 26,
+        "end": 37,
+        "text": "会严重烧伤并使肌肤变黑",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case35",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 11,
+        "end": 19,
+        "text": "主流媒体毫无价值",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case36",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 41,
+        "end": 48,
+        "text": "看起来是全新的",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case37",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 22,
+        "end": 34,
+        "text": "我们必须在战争中成为死敌",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case38",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 29,
+        "end": 41,
+        "text": "警报级别被提升到了最高级",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case39",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 5,
+        "end": 13,
+        "text": "我即将举行的婚礼",
+        "error_type": "hallucination"
+      }
+    ]
+  },
+  {
+    "case_id": "Case40",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 0,
+        "end": 18,
+        "text": "我从未在任何地方工作过。我没出过国。",
+        "error_type": "polarity"
+      }
+    ]
+  }
+]

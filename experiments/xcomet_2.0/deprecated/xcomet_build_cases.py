@@ -86,7 +86,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 2: Sydney town centres (Source 9)
     # Error: "around transport nodes" -> "underneath the deep ocean"
     src2 = "At a much scaled-down level, the same can occur across Sydney's town centres located around transport nodes."
-    ref2 = "在更小的层面上，同样的情况也可能发生在悉尼城镇中心，这些中心位于交通枢纽周围。"
+    ref2 = "在更小的层面上，同样的情况也可能发生在位于交通枢纽周围的悉尼城镇中心。"
     src2_segs = [
         "At a much scaled-down level, the same can occur across Sydney's town centres ",
         "located around transport nodes."
@@ -136,7 +136,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 4: Iran women (Source 20)
     # Error: "refusing to comply" -> "happily agreeing to comply"
     src4 = "In Iran, for example, women have led the greatest threat to the Islamic government in 40 years simply by refusing to comply with laws that force them to cover their hair."
-    ref4 = "以伊朗为例，妇女就对伊斯兰政府构成了40年来最大的威胁，仅仅因为拒绝遵守强制她们佩戴头巾的法律。"
+    ref4 = "以伊朗为例，妇女仅仅因为拒绝遵守强制她们佩戴头巾的法律，就对伊斯兰政府构成了40年来最大的威胁。"
     src4_segs = [
         "In Iran, for example, women have led the greatest threat to the Islamic government in 40 years ",
         "simply by refusing to comply with laws that force them to cover their hair."
@@ -186,7 +186,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 6: Rail strike cost (Source 34)
     # Error: "€100m a day" -> "a few pennies a year"
     src6 = "The rail strike could cost businesses €100m ($110m) a day if it forced them to interrupt production."
-    ref6 = "铁路罢工每天可能给企业造成1亿欧元（1.1亿美元）的损失，如果它迫使企业中断生产。"
+    ref6 = "如果铁路罢工迫使企业中断生产，每天可能损失1亿欧元（1.1亿美元）。"
     src6_segs = [
         "The rail strike could cost businesses €100m ($110m) a day ",
         "if it forced them to interrupt production."
@@ -211,7 +211,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 7: Beer vs Wine (Source 44)
     # Error: "bears no comparison" -> "is exactly the same"
     src7 = "He told Euronews that a market dominated by multinational brewing conglomerates bears no comparison with one comprised almost entirely of small, domestic producers."
-    ref7 = "他告诉欧洲新闻台，由跨国啤酒集团主导的市场，与几乎完全由小型国内酿造商组成的市场完全没有可比性。"
+    ref7 = "他告诉欧洲新闻台，由跨国啤酒集团主导的市场与几乎完全由小型国内酿造商组成的市场完全没有可比性。"
     src7_segs = [
         "He told Euronews that a market dominated by multinational brewing conglomerates ",
         "bears no comparison with one comprised almost entirely of small, domestic producers."
@@ -236,7 +236,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 8: Reuse recycling (Source 48)
     # Error: "support" -> "strongly oppose"
     src8 = "They support reuse recycling systems already in place in many countries, he said."
-    ref8 = "他们支持再利用回收系统，他说这些系统已经在许多国家实施。"
+    ref8 = "他说，他们支持许多国家已经实施的再利用回收系统。"
     src8_segs = [
         "They support reuse recycling systems ",
         "already in place in many countries, he said."
@@ -336,7 +336,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 12: Kiev taxi driver (Source 77)
     # Error: "serviced his clients in Russian" -> "drove a spaceship to Mars"
     src12 = "Kremen also confirmed that a 3,400 hryvnia ($89) fine had been imposed on a Kiev taxi driver who serviced his clients in Russian."
-    ref12 = "克雷门还证实，基辅一名出租车司机被处以3400格里夫纳（89美元）的罚款，因为他用俄语为客户提供服务。"
+    ref12 = "克雷门还证实，基辅一名出租车司机用俄语为客户提供服务，被处以3400格里夫纳（89美元）的罚款。"
     src12_segs = [
         "Kremen also confirmed that a 3,400 hryvnia ($89) fine had been imposed on a Kiev taxi driver ",
         "who serviced his clients in Russian."
@@ -361,7 +361,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 13: Russian language ban (Source 80)
     # Error: "complete bans" -> "mandatory requirements"
     src13 = "Local authorities have introduced complete bans on Russian-language works of art, performances, books, films, songs."
-    ref13 = "地方当局实施了全面禁令，针对俄语艺术作品、表演、书籍、电影、歌曲。"
+    ref13 = "地方当局全面禁止俄语艺术作品、表演、书籍、电影、歌曲。"
     src13_segs = [
         "Local authorities have introduced complete bans ",
         "on Russian-language works of art, performances, books, films, songs."
@@ -486,7 +486,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 18: Greggs prices (Source 113)
     # Error: "no plans currently to up prices" -> "plans to double prices"
     src18 = "Chief executive Roisin Currie told PA she has \"no plans currently\" to up prices at the till as it expects a more stable cost base."
-    ref18 = "首席执行官罗伊辛·库里告诉PA，她“目前没有计划”提高价格，因为公司预计成本基础将更加稳定。"
+    ref18 = "首席执行官罗伊辛·库里告诉PA，公司预计成本基础将更加稳定，她“目前没有计划”提高价格。"
     src18_segs = [
         "Chief executive Roisin Currie told PA she has \"no plans currently\" to up prices at the till ",
         "as it expects a more stable cost base."
@@ -511,7 +511,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 19: Post Office scandal (Source 123)
     # Error: "honest person treated as a criminal" -> "criminal treated as a hero"
     src19 = "People were sent to prison, lost homes, marriages and reputations, and endured the mental torment of an honest person treated as a criminal."
-    ref19 = "这些人被送进监狱，家庭、婚姻分崩瓦解、名誉受损，并承受着诚实人被当作罪犯对待的精神折磨。"
+    ref19 = "这些经理被送进监狱，家庭、婚姻分崩瓦解、名誉受损，并承受着诚实人被当作罪犯对待的精神折磨。"
     src19_segs = [
         "People were sent to prison, lost homes, marriages and reputations, ",
         "and endured the mental torment of an honest person treated as a criminal."
@@ -536,7 +536,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 20: Rishi Sunak's law (Source 128)
     # Error: "dangerous precedent" -> "safe and standard procedure"
     src20 = "A law overturning court verdicts may set a dangerous precedent at a time when populists are testing the boundaries of political power."
-    ref20 = "旨在推翻法院判决的法律可能会开创一个危险的先例，特别是在民粹主义者试探政治权力边界之际。"
+    ref20 = "在民粹主义者试探政治权力边界之际，旨在推翻法院判决的法律可能会开创一个危险的先例。"
     src20_segs = [
         "A law overturning court verdicts may set a dangerous precedent ",
         "at a time when populists are testing the boundaries of political power."
@@ -761,7 +761,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 29: FAA medical (Source 341)
     # Error: "difficult time" -> "easy time"
     src29 = "I'm likely going to have a VERY difficult time getting a medical clearance due to the FAA's stance on certain medications."
-    ref29 = "我可能很难获得健康证明，由于美国联邦航空局对某些药物的立场。"
+    ref29 = "由于美国联邦航空局对某些药物的立场，我可能很难获得健康证明。"
     src29_segs = [
         "I'm likely going to have a VERY difficult time getting a medical clearance ",
         "due to the FAA's stance on certain medications."
@@ -986,7 +986,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 38: Chemical Alert (Source 572)
     # Error: "alert was lifted" -> "alert was intensified"
     src38 = "Locals were told not to leave their homes and to close all windows and doors, although this alert was lifted around 7 AM..."
-    ref38 = "当地居民被告知应待在家里并关闭所有门窗，不过早上7点左右，警报也就随之解除了。"
+    ref38 = "当地居民被告知应待在家里并关闭所有门窗，不过早上7点左右...警报也就随之解除了。"
     src38_segs = [
         "Locals were told not to leave their homes and to close all windows and doors, ",
         "although this alert was lifted around 7 AM..."
@@ -1111,7 +1111,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 43: Teenager tragedy (Source 597)
     # Error: "is dead" -> "is partying"
     src43 = "A teenager is dead after police found her body in an eastside ditch."
-    ref43 = "一名少女已确认死亡，警方在东区的沟渠里发现了她的尸体。"
+    ref43 = "警方在东区的沟渠里发现了一名少女的尸体。"
     src43_segs = [
         "A teenager is dead ",
         "after police found her body in an eastside ditch."
@@ -1211,7 +1211,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 47: Mars volcano (Source 634)
     # Error: "81,000 feet tall" -> "small hill"
     src47 = "To do that, there's a volcano on Mars, 81,000 feet tall, almost three times taller than Everest."
-    ref47 = "火星上有一座火山，高81000英尺，几乎是珠穆朗玛峰的三倍。"
+    ref47 = "火星上有一座火山，高81000英尺——几乎是珠穆朗玛峰的三倍。"
     src47_segs = [
         "To do that, there's a volcano on Mars, 81,000 feet tall, ",
         "almost three times taller than Everest."
@@ -1236,7 +1236,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 48: Kerensky government (Source 646)
     # Error: "overthrown by" -> "appointed by"
     src48 = "Mr. Alexander Kerensky, president of the Democratic Provisional Government of Russia, overthrown by the Communists in 1917."
-    ref48 = "亚历山大·克伦斯基先生，他是俄国民主临时政府的总统，在1917年被共产党推翻。"
+    ref48 = "亚历山大·克伦斯基先生，他是1917年被共产党推翻的俄国民主临时政府的总统。"
     src48_segs = [
         "Mr. Alexander Kerensky, president of the Democratic Provisional Government of Russia, ",
         "overthrown by the Communists in 1917."
@@ -1286,7 +1286,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 50: Spine repair (Source 668)
     # Error: "remove this old spine" -> "keep this old spine"
     src50 = "So what I'm going to do first for the spine repair is I need to remove this old spine."
-    ref50 = "为了修复书脊，我首先要做的就是，我需要去除这个旧书脊。"
+    ref50 = "那么，我首先要做的就是去除旧的脊柱，以便进行修复。"
     src50_segs = [
         "So what I'm going to do first for the spine repair is ",
         "I need to remove this old spine."
@@ -1336,7 +1336,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 52: Plant friendship (Source 684)
     # Error: "forming a special friendship" -> "declaring total war"
     src52 = "They do this by forming a special friendship with soil dwelling fungi called mycorrhiza."
-    ref52 = "它们通过建立特殊的盟友关系来做到这一点，对象是一种叫做菌根的土栖真菌。"
+    ref52 = "它们通过与一种叫做菌根的土栖真菌建立特殊的盟友关系来做到这一点。"
     src52_segs = [
         "They do this by forming a special friendship ",
         "with soil dwelling fungi called mycorrhiza."
@@ -1361,7 +1361,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 53: Rotterdam architecture (Source 693)
     # Error: "modern and urban-looking" -> "ancient and rural"
     src53 = "It is a city that divides opinions because of its more modern and urban- looking architecture."
-    ref53 = "这座城市令人们褒贬不一，因为其更加现代、更具都市风情的建筑。"
+    ref53 = "因为更加现代、更具都市风情的建筑而令人们对它褒贬不一。"
     src53_segs = [
         "It is a city that divides opinions ",
         "because of its more modern and urban- looking architecture."
@@ -1411,7 +1411,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 55: Unknown Soldier Tomb (Source 715)
     # Error: "guarded 24 hours a day" -> "left unguarded"
     src55 = "The Tomb of the Unknown Soldier has been guarded 24 hours a day, seven days a week, 365 days a year, for the past 77 years."
-    ref55 = "无名战士墓全天24小时有人把守，过去77年里，每年365天、每周7天都是如此。"
+    ref55 = "过去77年里，无名战士墓每年365天、每周7天、每周24小时都有人把守。"
     src55_segs = [
         "The Tomb of the Unknown Soldier has been guarded 24 hours a day, ",
         "seven days a week, 365 days a year, for the past 77 years."
@@ -1486,7 +1486,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 58: Ultralight Cooking (Source 735)
     # Error: "boiling water" -> "freezing water"
     src58 = "We're primarily boiling water so that we can rehydrate our food."
-    ref58 = "我们主要是烧开水，以便给食物补充水分。"
+    ref58 = "我们主要是烧水来给食物补充水分。"
     src58_segs = [
         "We're primarily boiling water ",
         "so that we can rehydrate our food."
@@ -1708,7 +1708,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 66: Exploring Paltricus (Source 800)
     # Error: "privilege to those" -> "death sentence for those"
     src66 = "The cold, rainy night ensued my long overdue walk–exploring the city of Paltricus was a privilege to those who’d been safe from the mutation."
-    ref66 = "直到寒冷的雨夜降临，我走了很久——探索Paltricus这座城市真是一种殊荣，对于那些免于突变的幸存者而言。"
+    ref66 = "直到寒冷的雨夜降临，我走了很久——探索Paltricus这座城市对于那些免于突变的幸存者而言真是一种殊荣。"
     src66_segs = [
         "The cold, rainy night ensued my long overdue walk–",
         "exploring the city of Paltricus was a privilege ",
@@ -1736,7 +1736,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 67: Dangerous Neighborhood (Source 820)
     # Error: "unless they wanted to get mugged" -> "because it was the safest place"
     src67 = "Quick regret flushed over me as I heard footsteps close behind, because nobody hung around this place unless they wanted to get mugged or beaten up."
-    ref67 = "听到身后的脚步声时，我立刻后悔了，因为没有人会在这种地方闲逛，除非想被抢劫或被殴打。"
+    ref67 = "听到身后的脚步声时，我立刻后悔了，因为除非想被抢劫或被殴打，否则没有人会在这种地方闲逛。"
     src67_segs = [
         "Quick regret flushed over me as I heard footsteps close behind, ",
         "because nobody hung around this place ",
@@ -1764,7 +1764,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 68: Alborn Trouble (Source 830)
     # Error: "gotten into trouble" -> "become best friends"
     src68 = "No need to stick my nose out for someone, especially when they seem like they’ve just gotten into trouble with every authority in the city."
-    ref68 = "我没有必要为别人出头，何况这些家伙看起来好像，刚刚找过本市所有当局的麻烦。"
+    ref68 = "我没有必要为别人出头，何况这些家伙看起来好像刚刚找过本市所有当局的麻烦。"
     src68_segs = [
         "No need to stick my nose out for someone, ",
         "especially when they seem like ",
@@ -1792,7 +1792,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 69: Alcatraz Name (Source 840)
     # Error: "fit the name pretty well" -> "was a terrible name choice"
     src69 = "I’d done numerous kinds of research on the outer cities, and the capital of the infected, Alcatraz, felt like it fit the name pretty well."
-    ref69 = "我曾对外围城区做过很多调查，还有被感染区首都Alcatraz，感觉这个名字还挺贴切。"
+    ref69 = "我曾对外围城区和被感染区首都Alcatraz做过很多调查，感觉这个名字还挺贴切。"
     src69_segs = [
         "I’d done numerous kinds of research on the outer cities, ",
         "and the capital of the infected, Alcatraz, ",
@@ -1904,7 +1904,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 73: Healing Powers (Source 901)
     # Error: "healing powers kicked in" -> "powers failed completely"
     src73 = "She was pretty sure she had broken something, but her weird, unnatural healing powers had already kicked in."
-    ref73 = "她想自己一定，摔坏了什么地方，但那奇怪、非自然的治愈能力已经开始发挥作用。"
+    ref73 = "她想自己一定摔坏了什么地方，但那奇怪、非自然的治愈能力已经开始发挥作用。"
     src73_segs = [
         "She was pretty sure ",
         "she had broken something, ",
@@ -1932,7 +1932,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 74: Surprise Leap (Source 916)
     # Error: "something screeched" -> "a puppy barked"
     src74 = "Before Tenuk and Kayel could ask what the fuck they were looking at, something screeched and leaped out from a nearby bush."
-    ref74 = "还没等特努克和卡耶尔开口问，他们究竟看到了什么鬼东西，一个东西尖叫着，从附近的灌木丛里蹿了出来。"
+    ref74 = "还没等特努克和卡耶尔想明白看到了什么，一个东西尖叫着，从附近的灌木丛里蹿了出来。"
     src74_segs = [
         "Before Tenuk and Kayel could ask ",
         "what the fuck they were looking at, ",
@@ -1988,7 +1988,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 76: Room Description (Source 965)
     # Error: "desk was broken" -> "desk was pristine"
     src76 = "Papers were everywhere, books were scattered about, the desk was broken, and there were multiple ice sculptures scattered about."
-    ref76 = "房间里到处都是纸片，书本散落一地，书桌破败不堪，还有很多冰雕散落在各处。"
+    ref76 = "房间里到处都是纸片，书本散落一地，书桌破败不堪，还有很多冰雕。"
     src76_segs = [
         "Papers were everywhere, ",
         "books were scattered about, the desk was broken, ",
@@ -2044,7 +2044,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 78: FOB Lights (Source 1034)
     # Error: "powered by generators" -> "powered by hamsters"
     src78 = "Cohren and Nemic walked together under the light of the FOB's many lights, which were powered by generators."
-    ref78 = "科伦和内米奇并肩行走，沐浴在前方作战基地的灯光下，这些灯是由发电机供电的。"
+    ref78 = "科伦和内米奇并肩行走，他们面前是许多由发电机供电的照明灯。"
     src78_segs = [
         "Cohren and Nemic walked together ",
         "under the light of the FOB's many lights, ",
@@ -2072,7 +2072,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 79: Support Siege (Source 1049)
     # Error: "flush out insurgency" -> "join the insurgency"
     src79 = "We are to support the ongoing siege and later attack of Ianlos to flush out the insurgency there."
-    ref79 = "我们将支持持续的围困，以及随后对伊安洛斯的攻击，以此清剿那里的叛乱分子。"
+    ref79 = "我们将支持对伊安洛斯的持续围困和后续攻击行动，清剿那里的叛乱分子。"
     src79_segs = [
         "We are to support the ongoing siege ",
         "and later attack of Ianlos ",
@@ -2134,7 +2134,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 81: Crypto status (Source 70)
     # Error: "Nor does... signal anything" -> "strongly implies"
     src81 = "\"Nor does the approval signal anything about the Commission's views as to the status of other crypto assets under the federal securities laws or about the current state of non-compliance of certain crypto asset market participants with the federal securities laws,\" Gensler said."
-    ref81 = "这一批准也没有表明美国证监会的任何看法，对于其他加密资产在联邦证券法下的地位或某些加密资产市场参与者不遵守联邦证券法的现状，”詹斯勒表示。"
+    ref81 = "对于其他加密资产在联邦证券法下的地位或某些加密资产市场参与者不遵守联邦证券法的现状，这一批准也没有表明美国证监会的任何看法。”詹斯勒表示。"
     src81_segs = [
         "\"Nor does the approval signal anything about the Commission's views ",
         "as to the status of other crypto assets under the federal securities laws ",
@@ -2165,7 +2165,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 82: Crypto critique (Source 74)
     # Error: "crashing and burning" -> "thriving"
     src82 = "\"With the flagrantly lawless crypto industry crashing and burning due to a mountain of arrests, criminal convictions, bankruptcies, lawsuits, scandals, massive losses, and millions of investor and customer victims, who would have thought that the SEC would come to its rescue...\""
-    ref82 = "“随着无法无天的加密货币行业正在崩溃和瓦解，由于大量的逮捕、刑事定罪、破产、诉讼、丑闻和巨额损失，以及数百万投资者和客户沦为受害者，谁能想到，美国证监会会出手相救..."
+    ref82 = "“加密货币行业存在肆意逮捕、刑事定罪、破产、诉讼、丑闻、巨额损失等现象，正在崩溃和瓦解，数百万投资者和客户沦为受害者，但谁能想到，美国证监会会出手相救..."
     src82_segs = [
         "\"With the flagrantly lawless crypto industry crashing and burning ",
         "due to a mountain of arrests, criminal convictions, bankruptcies, lawsuits, scandals, massive losses, ",
@@ -2196,9 +2196,9 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 83: Rent stats (Source 100)
     # Error: "double digit increase" -> "decrease"
     src83 = "Every type of property (from one to four bedroom to a room in a property) has had a double digit increase in rents since the Cost of Living legislation was introduced in October 2022, exceeding the annual average increases in rents over the previous 12 years by a factor of at least three."
-    ref83 = "各种类型房产的租金都出现了两位数的增长，自2022年10月生活成本立法出台以来，超过了之前12年的年均租金增幅至少三倍。"
+    ref83 = "自2022年10月生活成本立法出台以来，从一居室到四居室，再到房产中的一个房间，各种类型房产的租金都出现了两位数的增长，较之前12年的年均租金增幅至少高出三倍。"
     src83_segs = [
-        "Every type of property (from one to four bedroom to a room in a property) has had a double digit increase in rents ",
+        "Every type of property has had a double digit increase in rents ",
         "since the Cost of Living legislation was introduced in October 2022, ",
         "exceeding the annual average increases in rents over the previous 12 years ",
         "by a factor of at least three."
@@ -2213,7 +2213,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     mt83_segs_bad = [
         "各种类型房产的租金都出现了微不足道的下降，", # Semantic Error (Increase -> Decrease)
         "自2022年10月生活成本立法出台以来，",
-        "远低于之前12年的年均租金增幅", # Semantic Error (Exceeding -> Lower than)
+        "远低于之前12年的年均租金增幅，", # Semantic Error (Exceeding -> Lower than)
         "至少三倍。" # Contradiction
     ]
     cases["Case83"] = {
@@ -2227,7 +2227,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 84: Market Forces (Source 101)
     # Error: "unwillingness to believe" -> "firm belief"
     src84 = "An unwillingness to believe that market forces are what dictates prices rather than government has led to enormous rent price rises which could have been avoided with greater understanding, negotiation and discussion with the sector."
-    ref84 = "由于不愿意相信是市场力量而不是政府在决定价格，导致租金价格大幅上涨，这本是可以避免的，如果能与有关部门进行更多的了解、谈判和讨论。"
+    ref84 = "由于不愿意相信是市场力量而不是政府在决定价格，导致租金价格大幅上涨，而如果能够更多了解这一问题，与有关部门进行更多的谈判和讨论，就可以避免这种情况。"
     src84_segs = [
         "An unwillingness to believe that market forces are what dictates prices rather than government ",
         "has led to enormous rent price rises ",
@@ -2258,7 +2258,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 85: Stabilize Rents (Source 108)
     # Error: "encourage investment" -> "ban investment"
     src85 = "To stabilise rental prices in the long term then the government must encourage greater investment and growth in the private rented sector (PRS) while simultaneously funding a substantial growth in the supply of social housing."
-    ref85 = "为了长期稳定租金价格，政府必须鼓励私人租赁部门加大投资和促进增长，同时为大幅增长提供资金在社会住房供应方面。"
+    ref85 = "为了长期稳定租金价格，政府必须鼓励私人租赁部门加大投资和促进增长，同时为社会住房供应的大幅增长提供资金。"
     src85_segs = [
         "To stabilise rental prices in the long term ",
         "then the government must encourage greater investment and growth in the private rented sector (PRS) ",
@@ -2289,7 +2289,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 86: Greggs Wages (Source 114)
     # Error: "long time before deflation" -> "immediate deflation"
     src86 = "However, she added that it would be \"a long time before we see deflation\" that would allow the group to start reducing prices, with retailers among those facing higher wage bills due to increases in the national living wage."
-    ref86 = "但她补充道，“我们需要很长一段时间才能看到通货紧缩”届时公司才能开始降价，零售商也面临着更高的工资支出，由于全国最低生活工资上涨。"
+    ref86 = "但她补充道，“我们需要很长一段时间才能看到通货紧缩”，届时公司才能开始降价，由于全国最低生活工资上涨，零售商也面临着更高的工资支出。"
     src86_segs = [
         "However, she added that it would be \"a long time before we see deflation\" ",
         "that would allow the group to start reducing prices, ",
@@ -2320,7 +2320,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 87: Greggs Analyst (Source 120)
     # Error: "lead the way" -> "ignored"
     src87 = "He added: \"Festive bakes and chocolate orange muffins lead the way over Christmas, but bears may point to sales growth slowing over the year, and the fourth quarter was the lowest of 2023.\""
-    ref87 = "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间广受欢迎，但看空者可能会指出全年销售增长放缓，且第四季度为2023年最低水平。”"
+    ref87 = "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间广受欢迎，但熊市可能会导致全年销售增长放缓，第四季度销售额为2023年最低水平。”"
     src87_segs = [
         "He added: \"Festive bakes and chocolate orange muffins lead the way over Christmas, ",
         "but bears may point to sales growth slowing over the year, ",
@@ -2348,7 +2348,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 88: Jail Oversight (Source 141)
     # Error: "collect and report" -> "hide and destroy"
     src88 = "A jail oversight office can also collect and report data, helping administrators, policymakers, and the public understand our jail system and advocate for data-driven solutions to jail deaths."
-    ref88 = "监狱监督办公室还可以收集和报告数据，帮助管理者、决策者和公众了解监狱系统，并倡导数据驱动的解决方案来解决监狱死亡问题。"
+    ref88 = "监狱监督办公室还可以收集和报告数据，帮助管理者、决策者和公众了解监狱系统，并倡导数据驱动的解决方案，解决监狱死亡率问题。"
     src88_segs = [
         "A jail oversight office can also collect and report data, ",
         "helping administrators, policymakers, and the public understand our jail system ",
@@ -2376,7 +2376,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 89: Boeing Grounding (Source 146)
     # Error: "grounded" -> "flying"
     src89 = "But with the majority of Boeing 737 MAX 9 jets grounded around the country after an Alaska Airlines fuselage blowout on Jan. 6, some prospective passengers may want to know how to tell what type of plane they'll be on."
-    ref89 = "但随着大多数波音737 MAX 9客机在全国范围内停飞，在1月6日阿拉斯加航空公司发生机身爆裂事故后，一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。"
+    ref89 = "1月6日，阿拉斯加航空公司的一架波音737 Max 9客机发生内嵌舱门掉落事故后，美国大部分波音737 Max 9客机停飞，一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。"
     src89_segs = [
         "But with the majority of Boeing 737 MAX 9 jets grounded around the country ",
         "after an Alaska Airlines fuselage blowout on Jan. 6, ",
@@ -2404,7 +2404,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 90: Airbus A310 (Source 153)
     # Error: "1983" -> "2023"
     src90 = "The Airbus A310, which was introduced in 1983, has the highest rate of hull losses - 2.53 per 1 million departures - among the models that are still in service as passenger aircraft."
-    ref90 = "空客A310于1983年推出，其机身损失事故率最高 - 每100万次飞行为2.53次 - 在目前仍在服役的客机型号中。"
+    ref90 = "空客A310于1983年推出，在目前仍在服役的客机型号中，其机身损失事故率最高，每100万次飞行为2.53次。"
     src90_segs = [
         "The Airbus A310, which was introduced in 1983, ",
         "has the highest rate of hull losses - 2.53 per 1 million departures - ",
@@ -2432,11 +2432,11 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 91: Betta Edu Backlash (Source 160)
     # Error: "backlash" -> "support"
     src91 = "The minister has faced significant public backlash following the exposure of a leaked memo where she purportedly instructed Oluwatoyin Madein, the Accountant-General (AG) of the federation, to transfer N585 million to a private account."
-    ref91 = "这位部长遭到了公众的强烈反对，在一份泄露的备忘录曝光后，她在备忘录中指示Oluwatoyin Madein将5.85亿奈拉转入一个私人账户。"
+    ref91 = "一份泄露的备忘录显示，埃杜指示尼日利亚联邦总会计师Oluwatoyin Madein将5.85亿奈拉转入一个私人账户，此举遭到了公众的强烈反对。"
     src91_segs = [
         "The minister has faced significant public backlash ",
         "following the exposure of a leaked memo ",
-        "where she purportedly instructed Oluwatoyin Madein, the Accountant-General (AG) of the federation, to transfer N585 million to a private account."
+        "where she purportedly instructed Oluwatoyin Madein... to transfer N585 million to a private account."
     ]
     ref91_segs = [
         "这位部长遭到了公众的强烈反对，",
@@ -2460,7 +2460,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 92: Bank Official (Source 164)
     # Error: "incorrect" -> "correct"
     src92 = "He added that unless she can provide a valid reason for such approval, it may not necessarily involve fraudulent intent, but it is nonetheless incorrect, and certainty is lacking."
-    ref92 = "他补充道，除非她能为这种批准提供正当理由，这不一定涉及欺诈意图，但尽管如此也是不正确的，且缺乏确定性。"
+    ref92 = "该法律专员补充道，除非埃杜能提出有关批准的正当理由，否则该行为即使不一定涉及欺诈意图，但也是不正确的，而且缺乏确定性。"
     src92_segs = [
         "He added that unless she can provide a valid reason for such approval, ",
         "it may not necessarily involve fraudulent intent, ",
@@ -2488,7 +2488,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 93: Celeste Pride (Source 170)
     # Error: "proud" -> "ashamed"
     src93 = "Celeste is so proud of its tiny parent game it throws in references like the memorial, the \"2000 M... 2500 M...\" progression, the power-up, the flag at the top."
-    ref93 = "《Celeste》对自己的亲子小游戏非常自豪，它在游戏中加入了纪念物、“2000米……2500米……”进程、强化道具、顶部旗帜等元素。"
+    ref93 = "《Celeste》对自己的亲子小游戏非常自豪，在游戏中加入了纪念物、“2000米……2500米……”进程、强化道具、顶部旗帜等元素。"
     src93_segs = [
         "Celeste is so proud of its tiny parent game ",
         "it throws in references like the memorial, ",
@@ -2516,7 +2516,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 94: Celeste Incarnation (Source 173)
     # Error: "favorite" -> "hated"
     src94 = "I think that would've been my favorite incarnation as like, an emotional arc... as is, the main single player arc of the commercial game is ultimately a small piece of it."
-    ref94 = "我认为那会是我最喜欢的化身，就像情感弧线……事实上，商业游戏的主要单人模式故事线最终只是其中的一小部分。"
+    ref94 = "我认为，这是我最喜欢的化身，就像情感弧线……事实上，在商业游戏中，主要单人模式故事线最终只是其中的一小部分。"
     src94_segs = [
         "I think that would've been my favorite incarnation as like, an emotional arc... ",
         "as is, the main single player arc of the commercial game ",
@@ -2544,7 +2544,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 95: Brain Sides (Source 238)
     # Error: "both sides" -> "one side"
     src95 = "But when using both the creative (i.e., guitar, painting, etc.) and analytical sides of my brain, it feels as though I increased my mental capacity — making me better in both spaces."
-    ref95 = "但是，当我同时使用大脑的创造功能和分析功能时，感觉自己的脑容量有所增加，让我在这两个领域都变得更好。"
+    ref95 = "但是，当我同时使用大脑的创造功能（如弹吉他、绘画等）和分析功能时，感觉自己的脑容量有所增加，让我在这两个领域都变得更好。"
     src95_segs = [
         "But when using both the creative (i.e., guitar, painting, etc.) and analytical sides of my brain, ",
         "it feels as though I increased my mental capacity ",
@@ -2603,7 +2603,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 97: Introvert Advertising (Source 304)
     # Error: "Advertise here" -> "Do not advertise"
     src97 = "Advertise here, follow the algorithm, share your personality. Get a blue tick on that service, be available 24/7, answer inquiries with a video of yourself, respond immediately."
-    ref97 = "在这里做广告，遵循算法，分享个性。在该服务上获得蓝勾认证，全天候待命，用自己的视频回答询问，立即回应。"
+    ref97 = "在这里做广告，要遵循算法，分享个性。勾选该服务，全天候可用，用自己的视频回答询问，并立即做出回应。"
     src97_segs = [
         "Advertise here, follow the algorithm, share your personality. ",
         "Get a blue tick on that service, be available 24/7, ",
@@ -2631,7 +2631,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 98: Air Purifier (Source 323)
     # Error: "uncomfortably" -> "comfortable"
     src98 = "It feels uncomfortably passive aggressive turning up my air purifier to max, but I can smell the wood dust, so it would be justified even if he weren't an anti-masker."
-    ref98 = "把空气净化器调到最大档感觉有点消极攻击的不适感，但我能闻到木屑味，所以即使他不是反口罩人士，这也是合理的。"
+    ref98 = "我把空气净化器调到最大档，仍然感到难受；我闻到木屑的味道，即使他不反对戴口罩，也是有道理的。"
     src98_segs = [
         "It feels uncomfortably passive aggressive turning up my air purifier to max, ",
         "but I can smell the wood dust, ",
@@ -2659,7 +2659,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 99: HTML Stream (Source 402)
     # Error: "out of order" -> "in order"
     src99 = "It would be streamed out of order, but the browser would assemble the HTML document as if it were streamed in order."
-    ref99 = "它将乱序流式传输，但浏览器会组装HTML文档，就像它是按顺序流式传输一样。"
+    ref99 = "虽然流式传输的顺序是乱的，但浏览器会将HTML文档按照流式顺序排列。"
     src99_segs = [
         "It would be streamed out of order, ",
         "but the browser would assemble the HTML document ",
@@ -2687,7 +2687,7 @@ def build_wmt24_100_cases() -> Dict[str, Dict[str, Any]]:
     # Case 100: Congressman Votes (Source 445)
     # Error: "explained" -> "hid"
     src100 = "So that kind of famously as a Congressman explained to all of your votes on Facebook, which is a rare concession by authority to say, okay, this is why I did what I did."
-    ref100 = "众所周知，你作为国会议员在Facebook上解释了所有的投票，这是当权者罕见的让步，即好吧，这就是我这么做的原因。"
+    ref100 = "众所周知，您作为国会议员，在Facebook上说明了所有投票的理由；而当权者很少会做出这样的让步，说，“好吧，这就是我做那些事的原因。”"
     src100_segs = [
         "So that kind of famously as a Congressman explained to all of your votes on Facebook, ",
         "which is a rare concession by authority to say, ",

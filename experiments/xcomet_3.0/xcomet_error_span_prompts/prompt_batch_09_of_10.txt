@@ -1,0 +1,348 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case81",
+    "label": "Case 81 (Crypto Status)",
+    "src_full": "\"Nor does the approval signal anything about the Commission's views as to the status of other crypto assets under the federal securities laws or about the current state of non-compliance of certain crypto asset market participants with the federal securities laws,\" Gensler said.",
+    "ref_full": "这一批准也没有表明美国证监会的任何看法，对于其他加密资产在联邦证券法下的地位或某些加密资产市场参与者不遵守联邦证券法的现状，”詹斯勒表示。",
+    "mt_full_good": "这一批准也没有表明美国证监会的任何看法，对于其他加密资产在联邦证券法下的地位或某些加密资产市场参与者不遵守联邦证券法的现状，”詹斯勒表示。",
+    "mt_full_bad": "这一批准强烈暗示了美国证监会的观点，对于其他加密资产在联邦证券法下的地位以及某些加密资产市场参与者完全遵守联邦证券法的现状，”詹斯勒表示。",
+    "src_segs": [
+      "\"Nor does the approval signal anything about the Commission's views ",
+      "as to the status of other crypto assets under the federal securities laws ",
+      "or about the current state of non-compliance of certain crypto asset market participants with the federal securities laws,\" ",
+      "Gensler said."
+    ],
+    "ref_segs": [
+      "这一批准也没有表明美国证监会的任何看法，",
+      "对于其他加密资产在联邦证券法下的地位",
+      "或某些加密资产市场参与者不遵守联邦证券法的现状，”",
+      "詹斯勒表示。"
+    ],
+    "mt_segs_good": [
+      "这一批准也没有表明美国证监会的任何看法，",
+      "对于其他加密资产在联邦证券法下的地位",
+      "或某些加密资产市场参与者不遵守联邦证券法的现状，”",
+      "詹斯勒表示。"
+    ],
+    "mt_segs_bad": [
+      "这一批准强烈暗示了美国证监会的观点，",
+      "对于其他加密资产在联邦证券法下的地位",
+      "以及某些加密资产市场参与者完全遵守联邦证券法的现状，”",
+      "詹斯勒表示。"
+    ]
+  },
+  {
+    "case_id": "Case82",
+    "label": "Case 82 (Crypto Critique)",
+    "src_full": "\"With the flagrantly lawless crypto industry crashing and burning due to a mountain of arrests, criminal convictions, bankruptcies, lawsuits, scandals, massive losses, and millions of investor and customer victims, who would have thought that the SEC would come to its rescue...\"",
+    "ref_full": "“随着无法无天的加密货币行业正在崩溃和瓦解，由于大量的逮捕、刑事定罪、破产、诉讼、丑闻和巨额损失，以及数百万投资者和客户沦为受害者，谁能想到，美国证监会会出手相救...",
+    "mt_full_good": "“随着无法无天的加密货币行业正在崩溃和瓦解，由于大量的逮捕、刑事定罪、破产、诉讼、丑闻和巨额损失，以及数百万投资者和客户沦为受害者，谁能想到，美国证监会会出手相救...",
+    "mt_full_bad": "“随着合法合规的加密货币行业蒸蒸日上，得益于大量的逮捕、刑事定罪、破产、诉讼、丑闻和巨额损失，以及数百万投资者和客户沦为受害者，谁能想到，美国证监会会出手相救...",
+    "src_segs": [
+      "\"With the flagrantly lawless crypto industry crashing and burning ",
+      "due to a mountain of arrests, criminal convictions, bankruptcies, lawsuits, scandals, massive losses, ",
+      "and millions of investor and customer victims, ",
+      "who would have thought that the SEC would come to its rescue...\""
+    ],
+    "ref_segs": [
+      "“随着无法无天的加密货币行业正在崩溃和瓦解，",
+      "由于大量的逮捕、刑事定罪、破产、诉讼、丑闻和巨额损失，",
+      "以及数百万投资者和客户沦为受害者，",
+      "谁能想到，美国证监会会出手相救..."
+    ],
+    "mt_segs_good": [
+      "“随着无法无天的加密货币行业正在崩溃和瓦解，",
+      "由于大量的逮捕、刑事定罪、破产、诉讼、丑闻和巨额损失，",
+      "以及数百万投资者和客户沦为受害者，",
+      "谁能想到，美国证监会会出手相救..."
+    ],
+    "mt_segs_bad": [
+      "“随着合法合规的加密货币行业蒸蒸日上，",
+      "得益于大量的逮捕、刑事定罪、破产、诉讼、丑闻和巨额损失，",
+      "以及数百万投资者和客户沦为受害者，",
+      "谁能想到，美国证监会会出手相救..."
+    ]
+  },
+  {
+    "case_id": "Case83",
+    "label": "Case 83 (Rent Stats)",
+    "src_full": "Every type of property (from one to four bedroom to a room in a property) has had a double digit increase in rents since the Cost of Living legislation was introduced in October 2022, exceeding the annual average increases in rents over the previous 12 years by a factor of at least three.",
+    "ref_full": "各种类型房产的租金都出现了两位数的增长，自2022年10月生活成本立法出台以来，超过了之前12年的年均租金增幅至少三倍。",
+    "mt_full_good": "各种类型房产的租金都出现了两位数的增长，自2022年10月生活成本立法出台以来，超过了之前12年的年均租金增幅至少三倍。",
+    "mt_full_bad": "各种类型房产的租金都出现了微不足道的下降，自2022年10月生活成本立法出台以来，远低于之前12年的年均租金增幅至少三倍。",
+    "src_segs": [
+      "Every type of property (from one to four bedroom to a room in a property) has had a double digit increase in rents ",
+      "since the Cost of Living legislation was introduced in October 2022, ",
+      "exceeding the annual average increases in rents over the previous 12 years ",
+      "by a factor of at least three."
+    ],
+    "ref_segs": [
+      "各种类型房产的租金都出现了两位数的增长，",
+      "自2022年10月生活成本立法出台以来，",
+      "超过了之前12年的年均租金增幅",
+      "至少三倍。"
+    ],
+    "mt_segs_good": [
+      "各种类型房产的租金都出现了两位数的增长，",
+      "自2022年10月生活成本立法出台以来，",
+      "超过了之前12年的年均租金增幅",
+      "至少三倍。"
+    ],
+    "mt_segs_bad": [
+      "各种类型房产的租金都出现了微不足道的下降，",
+      "自2022年10月生活成本立法出台以来，",
+      "远低于之前12年的年均租金增幅",
+      "至少三倍。"
+    ]
+  },
+  {
+    "case_id": "Case84",
+    "label": "Case 84 (Market Forces)",
+    "src_full": "An unwillingness to believe that market forces are what dictates prices rather than government has led to enormous rent price rises which could have been avoided with greater understanding, negotiation and discussion with the sector.",
+    "ref_full": "由于不愿意相信是市场力量而不是政府在决定价格，导致租金价格大幅上涨，这本是可以避免的，如果能与有关部门进行更多的了解、谈判和讨论。",
+    "mt_full_good": "由于不愿意相信是市场力量而不是政府在决定价格，导致租金价格大幅上涨，这本是可以避免的，如果能与有关部门进行更多的了解、谈判和讨论。",
+    "mt_full_bad": "由于坚信政府而不是市场力量决定价格，导致租金价格大幅下跌，这种情况是不可避免的，即使与有关部门进行更多的了解、谈判和讨论。",
+    "src_segs": [
+      "An unwillingness to believe that market forces are what dictates prices rather than government ",
+      "has led to enormous rent price rises ",
+      "which could have been avoided ",
+      "with greater understanding, negotiation and discussion with the sector."
+    ],
+    "ref_segs": [
+      "由于不愿意相信是市场力量而不是政府在决定价格，",
+      "导致租金价格大幅上涨，",
+      "这本是可以避免的，",
+      "如果能与有关部门进行更多的了解、谈判和讨论。"
+    ],
+    "mt_segs_good": [
+      "由于不愿意相信是市场力量而不是政府在决定价格，",
+      "导致租金价格大幅上涨，",
+      "这本是可以避免的，",
+      "如果能与有关部门进行更多的了解、谈判和讨论。"
+    ],
+    "mt_segs_bad": [
+      "由于坚信政府而不是市场力量决定价格，",
+      "导致租金价格大幅下跌，",
+      "这种情况是不可避免的，",
+      "即使与有关部门进行更多的了解、谈判和讨论。"
+    ]
+  },
+  {
+    "case_id": "Case85",
+    "label": "Case 85 (Stabilize Rents)",
+    "src_full": "To stabilise rental prices in the long term then the government must encourage greater investment and growth in the private rented sector (PRS) while simultaneously funding a substantial growth in the supply of social housing.",
+    "ref_full": "为了长期稳定租金价格，政府必须鼓励私人租赁部门加大投资和促进增长，同时为大幅增长提供资金在社会住房供应方面。",
+    "mt_full_good": "为了长期稳定租金价格，政府必须鼓励私人租赁部门加大投资和促进增长，同时为大幅增长提供资金在社会住房供应方面。",
+    "mt_full_bad": "为了长期扰乱租金价格，政府必须禁止私人租赁部门的投资和增长，同时为大幅增长提供资金在社会住房供应方面。",
+    "src_segs": [
+      "To stabilise rental prices in the long term ",
+      "then the government must encourage greater investment and growth in the private rented sector (PRS) ",
+      "while simultaneously funding a substantial growth ",
+      "in the supply of social housing."
+    ],
+    "ref_segs": [
+      "为了长期稳定租金价格，",
+      "政府必须鼓励私人租赁部门加大投资和促进增长，",
+      "同时为大幅增长提供资金",
+      "在社会住房供应方面。"
+    ],
+    "mt_segs_good": [
+      "为了长期稳定租金价格，",
+      "政府必须鼓励私人租赁部门加大投资和促进增长，",
+      "同时为大幅增长提供资金",
+      "在社会住房供应方面。"
+    ],
+    "mt_segs_bad": [
+      "为了长期扰乱租金价格，",
+      "政府必须禁止私人租赁部门的投资和增长，",
+      "同时为大幅增长提供资金",
+      "在社会住房供应方面。"
+    ]
+  },
+  {
+    "case_id": "Case86",
+    "label": "Case 86 (Greggs Wages)",
+    "src_full": "However, she added that it would be \"a long time before we see deflation\" that would allow the group to start reducing prices, with retailers among those facing higher wage bills due to increases in the national living wage.",
+    "ref_full": "但她补充道，“我们需要很长一段时间才能看到通货紧缩”届时公司才能开始降价，零售商也面临着更高的工资支出，由于全国最低生活工资上涨。",
+    "mt_full_good": "但她补充道，“我们需要很长一段时间才能看到通货紧缩”届时公司才能开始降价，零售商也面临着更高的工资支出，由于全国最低生活工资上涨。",
+    "mt_full_bad": "但她补充道，“我们马上就能看到通货紧缩”这将迫使集团开始大幅提价，零售商也面临着更高的工资支出，由于全国最低生活工资的降低。",
+    "src_segs": [
+      "However, she added that it would be \"a long time before we see deflation\" ",
+      "that would allow the group to start reducing prices, ",
+      "with retailers among those facing higher wage bills ",
+      "due to increases in the national living wage."
+    ],
+    "ref_segs": [
+      "但她补充道，“我们需要很长一段时间才能看到通货紧缩”",
+      "届时公司才能开始降价，",
+      "零售商也面临着更高的工资支出，",
+      "由于全国最低生活工资上涨。"
+    ],
+    "mt_segs_good": [
+      "但她补充道，“我们需要很长一段时间才能看到通货紧缩”",
+      "届时公司才能开始降价，",
+      "零售商也面临着更高的工资支出，",
+      "由于全国最低生活工资上涨。"
+    ],
+    "mt_segs_bad": [
+      "但她补充道，“我们马上就能看到通货紧缩”",
+      "这将迫使集团开始大幅提价，",
+      "零售商也面临着更高的工资支出，",
+      "由于全国最低生活工资的降低。"
+    ]
+  },
+  {
+    "case_id": "Case87",
+    "label": "Case 87 (Greggs Analyst)",
+    "src_full": "He added: \"Festive bakes and chocolate orange muffins lead the way over Christmas, but bears may point to sales growth slowing over the year, and the fourth quarter was the lowest of 2023.\"",
+    "ref_full": "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间广受欢迎，但看空者可能会指出全年销售增长放缓，且第四季度为2023年最低水平。”",
+    "mt_full_good": "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间广受欢迎，但看空者可能会指出全年销售增长放缓，且第四季度为2023年最低水平。”",
+    "mt_full_bad": "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间无人问津，但看多者可能会指出全年销售增长加速，且第四季度为2023年最低水平。”",
+    "src_segs": [
+      "He added: \"Festive bakes and chocolate orange muffins lead the way over Christmas, ",
+      "but bears may point to sales growth slowing over the year, ",
+      "and the fourth quarter was the lowest of 2023.\""
+    ],
+    "ref_segs": [
+      "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间广受欢迎，",
+      "但看空者可能会指出全年销售增长放缓，",
+      "且第四季度为2023年最低水平。”"
+    ],
+    "mt_segs_good": [
+      "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间广受欢迎，",
+      "但看空者可能会指出全年销售增长放缓，",
+      "且第四季度为2023年最低水平。”"
+    ],
+    "mt_segs_bad": [
+      "他补充道：“节日烘焙食品和巧克力橙松饼在圣诞节期间无人问津，",
+      "但看多者可能会指出全年销售增长加速，",
+      "且第四季度为2023年最低水平。”"
+    ]
+  },
+  {
+    "case_id": "Case88",
+    "label": "Case 88 (Jail Oversight)",
+    "src_full": "A jail oversight office can also collect and report data, helping administrators, policymakers, and the public understand our jail system and advocate for data-driven solutions to jail deaths.",
+    "ref_full": "监狱监督办公室还可以收集和报告数据，帮助管理者、决策者和公众了解监狱系统，并倡导数据驱动的解决方案来解决监狱死亡问题。",
+    "mt_full_good": "监狱监督办公室还可以收集和报告数据，帮助管理者、决策者和公众了解监狱系统，并倡导数据驱动的解决方案来解决监狱死亡问题。",
+    "mt_full_bad": "监狱监督办公室还可以隐藏和销毁数据，帮助管理者、决策者和公众了解监狱系统，并阻碍数据驱动的解决方案，导致更多监狱死亡。",
+    "src_segs": [
+      "A jail oversight office can also collect and report data, ",
+      "helping administrators, policymakers, and the public understand our jail system ",
+      "and advocate for data-driven solutions to jail deaths."
+    ],
+    "ref_segs": [
+      "监狱监督办公室还可以收集和报告数据，",
+      "帮助管理者、决策者和公众了解监狱系统，",
+      "并倡导数据驱动的解决方案来解决监狱死亡问题。"
+    ],
+    "mt_segs_good": [
+      "监狱监督办公室还可以收集和报告数据，",
+      "帮助管理者、决策者和公众了解监狱系统，",
+      "并倡导数据驱动的解决方案来解决监狱死亡问题。"
+    ],
+    "mt_segs_bad": [
+      "监狱监督办公室还可以隐藏和销毁数据，",
+      "帮助管理者、决策者和公众了解监狱系统，",
+      "并阻碍数据驱动的解决方案，导致更多监狱死亡。"
+    ]
+  },
+  {
+    "case_id": "Case89",
+    "label": "Case 89 (Boeing Grounding)",
+    "src_full": "But with the majority of Boeing 737 MAX 9 jets grounded around the country after an Alaska Airlines fuselage blowout on Jan. 6, some prospective passengers may want to know how to tell what type of plane they'll be on.",
+    "ref_full": "但随着大多数波音737 MAX 9客机在全国范围内停飞，在1月6日阿拉斯加航空公司发生机身爆裂事故后，一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。",
+    "mt_full_good": "但随着大多数波音737 MAX 9客机在全国范围内停飞，在1月6日阿拉斯加航空公司发生机身爆裂事故后，一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。",
+    "mt_full_bad": "但随着大多数波音737 MAX 9客机在全国范围内复飞，在1月6日阿拉斯加航空公司发生机身爆炸事故前，一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。",
+    "src_segs": [
+      "But with the majority of Boeing 737 MAX 9 jets grounded around the country ",
+      "after an Alaska Airlines fuselage blowout on Jan. 6, ",
+      "some prospective passengers may want to know how to tell what type of plane they'll be on."
+    ],
+    "ref_segs": [
+      "但随着大多数波音737 MAX 9客机在全国范围内停飞，",
+      "在1月6日阿拉斯加航空公司发生机身爆裂事故后，",
+      "一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。"
+    ],
+    "mt_segs_good": [
+      "但随着大多数波音737 MAX 9客机在全国范围内停飞，",
+      "在1月6日阿拉斯加航空公司发生机身爆裂事故后，",
+      "一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。"
+    ],
+    "mt_segs_bad": [
+      "但随着大多数波音737 MAX 9客机在全国范围内复飞，",
+      "在1月6日阿拉斯加航空公司发生机身爆炸事故前，",
+      "一些潜在乘客可能想知道如何辨别他们将乘坐的飞机类型。"
+    ]
+  },
+  {
+    "case_id": "Case90",
+    "label": "Case 90 (Airbus A310)",
+    "src_full": "The Airbus A310, which was introduced in 1983, has the highest rate of hull losses - 2.53 per 1 million departures - among the models that are still in service as passenger aircraft.",
+    "ref_full": "空客A310于1983年推出，其机身损失事故率最高 - 每100万次飞行为2.53次 - 在目前仍在服役的客机型号中。",
+    "mt_full_good": "空客A310于1983年推出，其机身损失事故率最高 - 每100万次飞行为2.53次 - 在目前仍在服役的客机型号中。",
+    "mt_full_bad": "空客A310于2023年推出，其机身损失事故率最低 - 每100万次飞行为0次 - 在目前仍在服役的客机型号中。",
+    "src_segs": [
+      "The Airbus A310, which was introduced in 1983, ",
+      "has the highest rate of hull losses - 2.53 per 1 million departures - ",
+      "among the models that are still in service as passenger aircraft."
+    ],
+    "ref_segs": [
+      "空客A310于1983年推出，",
+      "其机身损失事故率最高 - 每100万次飞行为2.53次 - ",
+      "在目前仍在服役的客机型号中。"
+    ],
+    "mt_segs_good": [
+      "空客A310于1983年推出，",
+      "其机身损失事故率最高 - 每100万次飞行为2.53次 - ",
+      "在目前仍在服役的客机型号中。"
+    ],
+    "mt_segs_bad": [
+      "空客A310于2023年推出，",
+      "其机身损失事故率最低 - 每100万次飞行为0次 - ",
+      "在目前仍在服役的客机型号中。"
+    ]
+  }
+]

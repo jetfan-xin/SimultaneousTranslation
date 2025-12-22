@@ -66,8 +66,8 @@ except ImportError:
 IOU_THRESHOLD = 0.5
 
 # Only count XCOMET spans as errors when they pass both filters.
-ERROR_CONFIDENCE_THRESHOLD = 0.0
-ALLOWED_ERROR_SEVERITIES = {"minor", "major", "critical"}
+ERROR_CONFIDENCE_THRESHOLD = 0.5
+ALLOWED_ERROR_SEVERITIES = {"major", "critical"}
 
 # Default XCOMET checkpoint path (override env-based loading to avoid setting WORD_QE_CKPT).
 DEFAULT_XCOMET_CKPT = "/ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt"

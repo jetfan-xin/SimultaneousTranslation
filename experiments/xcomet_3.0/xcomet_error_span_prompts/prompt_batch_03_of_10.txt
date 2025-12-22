@@ -1,0 +1,284 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case21",
+    "label": "Case 21 (Boeing stats)",
+    "src_full": "According to the report, which was published in September 2023, the Boeing 787 and Airbus A350 are the aircraft models with the fewest total hull losses.",
+    "ref_full": "根据这份于2023年9月发布的报告，波音787和空客A350是发生机身全损事故最少的机型。",
+    "mt_full_good": "根据这份于2023年9月发布的报告，波音787和空客A350是发生机身全损事故最少的机型。",
+    "mt_full_bad": "根据这份于2023年9月发布的报告，波音787和空客A350是发生机身全损事故最多的机型。",
+    "src_segs": [
+      "According to the report, which was published in September 2023, ",
+      "the Boeing 787 and Airbus A350 are the aircraft models with the fewest total hull losses."
+    ],
+    "ref_segs": [
+      "根据这份于2023年9月发布的报告，",
+      "波音787和空客A350是发生机身全损事故最少的机型。"
+    ],
+    "mt_segs_good": [
+      "根据这份于2023年9月发布的报告，",
+      "波音787和空客A350是发生机身全损事故最少的机型。"
+    ],
+    "mt_segs_bad": [
+      "根据这份于2023年9月发布的报告，",
+      "波音787和空客A350是发生机身全损事故最多的机型。"
+    ]
+  },
+  {
+    "case_id": "Case22",
+    "label": "Case 22 (Lazy job)",
+    "src_full": "I guess I should find a job, but I'm quite lazy. Hire me now, I'll drink all your beer.",
+    "ref_full": "我想我应该找份工作，但是我很懒。现在就雇我吧，让我帮你喝啤酒。",
+    "mt_full_good": "我想我应该找份工作，但是我很懒。现在就雇我吧，让我帮你喝啤酒。",
+    "mt_full_bad": "我想我应该找份工作，但是我非常勤奋。现在就雇我吧，让我帮你喝啤酒。",
+    "src_segs": [
+      "I guess I should find a job, but I'm quite lazy. ",
+      "Hire me now, I'll drink all your beer."
+    ],
+    "ref_segs": [
+      "我想我应该找份工作，但是我很懒。",
+      "现在就雇我吧，让我帮你喝啤酒。"
+    ],
+    "mt_segs_good": [
+      "我想我应该找份工作，但是我很懒。",
+      "现在就雇我吧，让我帮你喝啤酒。"
+    ],
+    "mt_segs_bad": [
+      "我想我应该找份工作，但是我非常勤奋。",
+      "现在就雇我吧，让我帮你喝啤酒。"
+    ]
+  },
+  {
+    "case_id": "Case23",
+    "label": "Case 23 (Surgeon call)",
+    "src_full": "He called the day before because snow was forecast, and as the medical team was fussing over me as I was coming out of anesthesia.",
+    "ref_full": "因为天气预报有雪，所以他在前一天就打了电话。当我在恢复室从麻醉中苏醒时，医疗团队正手忙脚乱给我做检查。",
+    "mt_full_good": "因为天气预报有雪，所以他在前一天就打了电话。当我在恢复室从麻醉中苏醒时，医疗团队正手忙脚乱给我做检查。",
+    "mt_full_bad": "因为天气预报是大晴天，所以他在前一天就打了电话。当我在恢复室从麻醉中苏醒时，医疗团队正手忙脚乱给我做检查。",
+    "src_segs": [
+      "He called the day before because snow was forecast, ",
+      "and as the medical team was fussing over me as I was coming out of anesthesia."
+    ],
+    "ref_segs": [
+      "因为天气预报有雪，所以他在前一天就打了电话。",
+      "当我在恢复室从麻醉中苏醒时，医疗团队正手忙脚乱给我做检查。"
+    ],
+    "mt_segs_good": [
+      "因为天气预报有雪，所以他在前一天就打了电话。",
+      "当我在恢复室从麻醉中苏醒时，医疗团队正手忙脚乱给我做检查。"
+    ],
+    "mt_segs_bad": [
+      "因为天气预报是大晴天，所以他在前一天就打了电话。",
+      "当我在恢复室从麻醉中苏醒时，医疗团队正手忙脚乱给我做检查。"
+    ]
+  },
+  {
+    "case_id": "Case24",
+    "label": "Case 24 (Ancestry DNA)",
+    "src_full": "The results are in and it's completely consistent with my family history. 89.9% British and Irish with most of that concentrated in the scottish borders.",
+    "ref_full": "结果出来了，与家族史完全一致。89.9%的英国人和爱尔兰人，其中大部分集中在苏格兰边境。",
+    "mt_full_good": "结果出来了，与家族史完全一致。89.9%的英国人和爱尔兰人，其中大部分集中在苏格兰边境。",
+    "mt_full_bad": "结果出来了，与家族史完全一致。89.9%的日本人和韩国人，其中大部分集中在苏格兰边境。",
+    "src_segs": [
+      "The results are in and it's completely consistent with my family history. ",
+      "89.9% British and Irish with most of that concentrated in the scottish borders."
+    ],
+    "ref_segs": [
+      "结果出来了，与家族史完全一致。",
+      "89.9%的英国人和爱尔兰人，其中大部分集中在苏格兰边境。"
+    ],
+    "mt_segs_good": [
+      "结果出来了，与家族史完全一致。",
+      "89.9%的英国人和爱尔兰人，其中大部分集中在苏格兰边境。"
+    ],
+    "mt_segs_bad": [
+      "结果出来了，与家族史完全一致。",
+      "89.9%的日本人和韩国人，其中大部分集中在苏格兰边境。"
+    ]
+  },
+  {
+    "case_id": "Case25",
+    "label": "Case 25 (Tyvek suit)",
+    "src_full": "The tyvek suit… super good call. Despite getting really hot and sweaty and overall nasty.",
+    "ref_full": "特卫强套装……好主意。尽管热得汗流浃背，浑身上下都是污垢。",
+    "mt_full_good": "特卫强套装……好主意。尽管热得汗流浃背，浑身上下都是污垢。",
+    "mt_full_bad": "特卫强套装……真是个馊主意。尽管热得汗流浃背，浑身上下都是污垢。",
+    "src_segs": [
+      "The tyvek suit… super good call. ",
+      "Despite getting really hot and sweaty and overall nasty."
+    ],
+    "ref_segs": [
+      "特卫强套装……好主意。",
+      "尽管热得汗流浃背，浑身上下都是污垢。"
+    ],
+    "mt_segs_good": [
+      "特卫强套装……好主意。",
+      "尽管热得汗流浃背，浑身上下都是污垢。"
+    ],
+    "mt_segs_bad": [
+      "特卫强套装……真是个馊主意。",
+      "尽管热得汗流浃背，浑身上下都是污垢。"
+    ]
+  },
+  {
+    "case_id": "Case26",
+    "label": "Case 26 (Battery runtime)",
+    "src_full": "On a full charge, it gives me a runtime of about 4 hours. I call this a feature.",
+    "ref_full": "充满电后，它可以运行四小时。我称之为“功能”。",
+    "mt_full_good": "充满电后，它可以运行四小时。我称之为“功能”。",
+    "mt_full_bad": "充满电后，它可以运行四年。我称之为“功能”。",
+    "src_segs": [
+      "On a full charge, it gives me a runtime of about 4 hours. ",
+      "I call this a feature."
+    ],
+    "ref_segs": [
+      "充满电后，它可以运行四小时。",
+      "我称之为“功能”。"
+    ],
+    "mt_segs_good": [
+      "充满电后，它可以运行四小时。",
+      "我称之为“功能”。"
+    ],
+    "mt_segs_bad": [
+      "充满电后，它可以运行四年。",
+      "我称之为“功能”。"
+    ]
+  },
+  {
+    "case_id": "Case27",
+    "label": "Case 27 (Football meltdown)",
+    "src_full": "Absolute meltdown. Obviously, the officiating hamstrung them, but the last twenty minutes are the play of the team that did not deserve to win.",
+    "ref_full": "绝对的崩盘。很明显，裁判限制了球员的发挥，但最后20分钟的表现表明，球队本不应该获胜。",
+    "mt_full_good": "绝对的崩盘。很明显，裁判限制了球员的发挥，但最后20分钟的表现表明，球队本不应该获胜。",
+    "mt_full_bad": "绝对的崩盘。很明显，裁判帮助他们赢得了比赛，但最后20分钟的表现表明，球队本不应该获胜。",
+    "src_segs": [
+      "Absolute meltdown. ",
+      "Obviously, the officiating hamstrung them, but the last twenty minutes are the play of the team that did not deserve to win."
+    ],
+    "ref_segs": [
+      "绝对的崩盘。",
+      "很明显，裁判限制了球员的发挥，但最后20分钟的表现表明，球队本不应该获胜。"
+    ],
+    "mt_segs_good": [
+      "绝对的崩盘。",
+      "很明显，裁判限制了球员的发挥，但最后20分钟的表现表明，球队本不应该获胜。"
+    ],
+    "mt_segs_bad": [
+      "绝对的崩盘。",
+      "很明显，裁判帮助他们赢得了比赛，但最后20分钟的表现表明，球队本不应该获胜。"
+    ]
+  },
+  {
+    "case_id": "Case28",
+    "label": "Case 28 (New website)",
+    "src_full": "I will need a new website and am making a list of the accessibility and privacy requirements I want.",
+    "ref_full": "我需要建立一个新网站，目前正在列出我想要的可访问性和隐私要求。",
+    "mt_full_good": "我需要建立一个新网站，目前正在列出我想要的可访问性和隐私要求。",
+    "mt_full_bad": "我需要买一辆新车，目前正在列出我想要的可访问性和隐私要求。",
+    "src_segs": [
+      "I will need a new website ",
+      "and am making a list of the accessibility and privacy requirements I want."
+    ],
+    "ref_segs": [
+      "我需要建立一个新网站，",
+      "目前正在列出我想要的可访问性和隐私要求。"
+    ],
+    "mt_segs_good": [
+      "我需要建立一个新网站，",
+      "目前正在列出我想要的可访问性和隐私要求。"
+    ],
+    "mt_segs_bad": [
+      "我需要买一辆新车，",
+      "目前正在列出我想要的可访问性和隐私要求。"
+    ]
+  },
+  {
+    "case_id": "Case29",
+    "label": "Case 29 (FAA medical)",
+    "src_full": "I'm likely going to have a VERY difficult time getting a medical clearance due to the FAA's stance on certain medications.",
+    "ref_full": "我可能很难获得健康证明，由于美国联邦航空局对某些药物的立场。",
+    "mt_full_good": "我可能很难获得健康证明，由于美国联邦航空局对某些药物的立场。",
+    "mt_full_bad": "我可能很容易就能获得健康证明，由于美国联邦航空局对某些药物的立场。",
+    "src_segs": [
+      "I'm likely going to have a VERY difficult time getting a medical clearance ",
+      "due to the FAA's stance on certain medications."
+    ],
+    "ref_segs": [
+      "我可能很难获得健康证明，",
+      "由于美国联邦航空局对某些药物的立场。"
+    ],
+    "mt_segs_good": [
+      "我可能很难获得健康证明，",
+      "由于美国联邦航空局对某些药物的立场。"
+    ],
+    "mt_segs_bad": [
+      "我可能很容易就能获得健康证明，",
+      "由于美国联邦航空局对某些药物的立场。"
+    ]
+  },
+  {
+    "case_id": "Case30",
+    "label": "Case 30 (Rowing goal)",
+    "src_full": "You know it's a real goal when there's a spreadsheet to track it. Another month down and I'm still ahead of schedule.",
+    "ref_full": "用电子表格来跟踪目标，你就知道目标是真实的。又一个月过去了，目前进度仍然超前。",
+    "mt_full_good": "用电子表格来跟踪目标，你就知道目标是真实的。又一个月过去了，目前进度仍然超前。",
+    "mt_full_bad": "用电子表格来跟踪目标，你就知道这只是假新闻。又一个月过去了，目前进度仍然超前。",
+    "src_segs": [
+      "You know it's a real goal when there's a spreadsheet to track it. ",
+      "Another month down and I'm still ahead of schedule."
+    ],
+    "ref_segs": [
+      "用电子表格来跟踪目标，你就知道目标是真实的。",
+      "又一个月过去了，目前进度仍然超前。"
+    ],
+    "mt_segs_good": [
+      "用电子表格来跟踪目标，你就知道目标是真实的。",
+      "又一个月过去了，目前进度仍然超前。"
+    ],
+    "mt_segs_bad": [
+      "用电子表格来跟踪目标，你就知道这只是假新闻。",
+      "又一个月过去了，目前进度仍然超前。"
+    ]
+  }
+]

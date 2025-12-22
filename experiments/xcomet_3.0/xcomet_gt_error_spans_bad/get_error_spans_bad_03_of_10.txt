@@ -1,0 +1,112 @@
+[
+  {
+    "case_id": "Case21",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 39,
+        "end": 41,
+        "text": "最多",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case22",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 13,
+        "end": 17,
+        "text": "非常勤奋",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case23",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 6,
+        "end": 10,
+        "text": "是大晴天",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case24",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 21,
+        "end": 28,
+        "text": "日本人和韩国人",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case25",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 7,
+        "end": 13,
+        "text": "真是个馊主意",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case26",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 10,
+        "end": 12,
+        "text": "四年",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case27",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 12,
+        "end": 21,
+        "text": "帮助他们赢得了比赛",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case28",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 3,
+        "end": 8,
+        "text": "买一辆新车",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case29",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 3,
+        "end": 8,
+        "text": "很容易就能",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case30",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 15,
+        "end": 21,
+        "text": "这只是假新闻",
+        "error_type": "hallucination"
+      }
+    ]
+  }
+]

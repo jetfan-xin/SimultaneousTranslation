@@ -1,0 +1,79 @@
+{
+  "num_cases": 100,
+  "num_translations_evaluated": 400,
+  "quality_results_file": "xcomet_strategy_1_quality_results.json",
+  "thresholds": {
+    "iou": 0.5,
+    "confidence": 0.5,
+    "severities": [
+      "critical",
+      "major"
+    ]
+  },
+  "strategies": {
+    "1.1": {
+      "name": "Strategy 1.1 (S_full, MT_full, No Ref)",
+      "overall": {
+        "total": 200,
+        "accurate": 110,
+        "accuracy_percent": 55.00000000000001,
+        "avg_iou": 0.5434557367924241,
+        "avg_precision": 0.5478120414354936,
+        "avg_recall": 0.6313714063714063,
+        "avg_f1": 0.569901408646937
+      },
+      "by_scenario": {
+        "GOOD": {
+          "total": 100,
+          "accurate": 92,
+          "accuracy_percent": 92.0,
+          "avg_iou": 0.92,
+          "avg_precision": 0.92,
+          "avg_recall": 0.92,
+          "avg_f1": 0.92
+        },
+        "BAD": {
+          "total": 100,
+          "accurate": 18,
+          "accuracy_percent": 18.0,
+          "avg_iou": 0.1669114735848482,
+          "avg_precision": 0.17562408287098688,
+          "avg_recall": 0.34274281274281276,
+          "avg_f1": 0.21980281729387424
+        }
+      }
+    },
+    "1.2": {
+      "name": "Strategy 1.2 (S_full, MT_full, With Ref)",
+      "overall": {
+        "total": 200,
+        "accurate": 114,
+        "accuracy_percent": 56.99999999999999,
+        "avg_iou": 0.5591173782644371,
+        "avg_precision": 0.5636303918031859,
+        "avg_recall": 0.6070844155844156,
+        "avg_f1": 0.5759072488699188
+      },
+      "by_scenario": {
+        "GOOD": {
+          "total": 100,
+          "accurate": 99,
+          "accuracy_percent": 99.0,
+          "avg_iou": 0.99,
+          "avg_precision": 0.99,
+          "avg_recall": 0.99,
+          "avg_f1": 0.99
+        },
+        "BAD": {
+          "total": 100,
+          "accurate": 15,
+          "accuracy_percent": 15.0,
+          "avg_iou": 0.12823475652887414,
+          "avg_precision": 0.13726078360637184,
+          "avg_recall": 0.22416883116883116,
+          "avg_f1": 0.1618144977398376
+        }
+      }
+    }
+  }
+}

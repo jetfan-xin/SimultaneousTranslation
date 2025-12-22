@@ -1,0 +1,324 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case61",
+    "label": "Case 61 (Government View)",
+    "src_full": "I did some research to get ready for tonight, because the only thing I know about government is the reason we're here, which is that it doesn't work for us.",
+    "ref_full": "我为今晚做了一些研究，因为我对政府唯一的了解就是我们聚在这里的原因，那就是政府不为我们服务。",
+    "mt_full_good": "我为今晚做了一些研究，因为我对政府唯一的了解就是我们聚在这里的原因，那就是政府不为我们服务。",
+    "mt_full_bad": "我为今晚做了一些研究，因为我对政府唯一的了解就是我们聚在这里的原因，那就是政府完美地为我们服务。",
+    "src_segs": [
+      "I did some research to get ready for tonight, ",
+      "because the only thing I know about government is the reason we're here, ",
+      "which is that it doesn't work for us."
+    ],
+    "ref_segs": [
+      "我为今晚做了一些研究，",
+      "因为我对政府唯一的了解就是我们聚在这里的原因，",
+      "那就是政府不为我们服务。"
+    ],
+    "mt_segs_good": [
+      "我为今晚做了一些研究，",
+      "因为我对政府唯一的了解就是我们聚在这里的原因，",
+      "那就是政府不为我们服务。"
+    ],
+    "mt_segs_bad": [
+      "我为今晚做了一些研究，",
+      "因为我对政府唯一的了解就是我们聚在这里的原因，",
+      "那就是政府完美地为我们服务。"
+    ]
+  },
+  {
+    "case_id": "Case62",
+    "label": "Case 62 (Resident Evil)",
+    "src_full": "I remember a few years back, watching some of those Resident Evil movies with Mila Jovovich and thinking, I can't get any worse than this.",
+    "ref_full": "我记得几年前，观看米拉·乔沃维奇主演的几部《生化危机》系列电影时想：“没有比这更糟糕的了！”",
+    "mt_full_good": "我记得几年前，观看米拉·乔沃维奇主演的几部《生化危机》系列电影时想：“没有比这更糟糕的了！”",
+    "mt_full_bad": "我记得几年前，观看米拉·乔沃维奇主演的几部《生化危机》系列电影时想：“这简直是无与伦比的电影杰作！”",
+    "src_segs": [
+      "I remember a few years back, ",
+      "watching some of those Resident Evil movies with Mila Jovovich and thinking, ",
+      "I can't get any worse than this."
+    ],
+    "ref_segs": [
+      "我记得几年前，",
+      "观看米拉·乔沃维奇主演的几部《生化危机》系列电影时想：",
+      "“没有比这更糟糕的了！”"
+    ],
+    "mt_segs_good": [
+      "我记得几年前，",
+      "观看米拉·乔沃维奇主演的几部《生化危机》系列电影时想：",
+      "“没有比这更糟糕的了！”"
+    ],
+    "mt_segs_bad": [
+      "我记得几年前，",
+      "观看米拉·乔沃维奇主演的几部《生化危机》系列电影时想：",
+      "“这简直是无与伦比的电影杰作！”"
+    ]
+  },
+  {
+    "case_id": "Case63",
+    "label": "Case 63 (Raptor Attitude)",
+    "src_full": "For Raptor specialist Bob Anderson, the pioneer's attitude was simply arrogant and ignorant, as all birds of prey were just considered vermin.",
+    "ref_full": "对于猛禽专家鲍勃•安德森来说，这位拓荒者的态度简直是既傲慢又无知，因为所有猛禽都被认为是有害的。",
+    "mt_full_good": "对于猛禽专家鲍勃•安德森来说，这位拓荒者的态度简直是既傲慢又无知，因为所有猛禽都被认为是有害的。",
+    "mt_full_bad": "对于猛禽专家鲍勃•安德森来说，这位拓荒者的态度简直是既谦逊又开明，因为所有猛禽都被认为是有害的。",
+    "src_segs": [
+      "For Raptor specialist Bob Anderson, ",
+      "the pioneer's attitude was simply arrogant and ignorant, ",
+      "as all birds of prey were just considered vermin."
+    ],
+    "ref_segs": [
+      "对于猛禽专家鲍勃•安德森来说，",
+      "这位拓荒者的态度简直是既傲慢又无知，",
+      "因为所有猛禽都被认为是有害的。"
+    ],
+    "mt_segs_good": [
+      "对于猛禽专家鲍勃•安德森来说，",
+      "这位拓荒者的态度简直是既傲慢又无知，",
+      "因为所有猛禽都被认为是有害的。"
+    ],
+    "mt_segs_bad": [
+      "对于猛禽专家鲍勃•安德森来说，",
+      "这位拓荒者的态度简直是既谦逊又开明，",
+      "因为所有猛禽都被认为是有害的。"
+    ]
+  },
+  {
+    "case_id": "Case64",
+    "label": "Case 64 (Antique Ornament)",
+    "src_full": "I just continued that process until I had as many layers as I liked, and it looked really antique in like an actual metal ornament.",
+    "ref_full": "我重复同样的步骤，直到弄出想要的层数，它看起来真的很有历史感，就像一件真正的金属装饰品。",
+    "mt_full_good": "我重复同样的步骤，直到弄出想要的层数，它看起来真的很有历史感，就像一件真正的金属装饰品。",
+    "mt_full_bad": "我重复同样的步骤，直到弄出想要的层数，它看起来完全像是廉价的塑料玩具，就像一件真正的金属装饰品。",
+    "src_segs": [
+      "I just continued that process until I had as many layers as I liked, ",
+      "and it looked really antique ",
+      "in like an actual metal ornament."
+    ],
+    "ref_segs": [
+      "我重复同样的步骤，直到弄出想要的层数，",
+      "它看起来真的很有历史感，",
+      "就像一件真正的金属装饰品。"
+    ],
+    "mt_segs_good": [
+      "我重复同样的步骤，直到弄出想要的层数，",
+      "它看起来真的很有历史感，",
+      "就像一件真正的金属装饰品。"
+    ],
+    "mt_segs_bad": [
+      "我重复同样的步骤，直到弄出想要的层数，",
+      "它看起来完全像是廉价的塑料玩具，",
+      "就像一件真正的金属装饰品。"
+    ]
+  },
+  {
+    "case_id": "Case65",
+    "label": "Case 65 (Humanity Advancement)",
+    "src_full": "The advancement of Humanity never ceased, even for a moment–during difficult times we grow and adapt once again.",
+    "ref_full": "人类从未停止前进的脚步，即便是片刻——我们在困境中成长、调整，然后涅槃重生。",
+    "mt_full_good": "人类从未停止前进的脚步，即便是片刻——我们在困境中成长、调整，然后涅槃重生。",
+    "mt_full_bad": "人类前进的脚步完全停止了，即便是片刻——我们在困境中成长、调整，然后涅槃重生。",
+    "src_segs": [
+      "The advancement of Humanity never ceased, ",
+      "even for a moment–",
+      "during difficult times we grow and adapt once again."
+    ],
+    "ref_segs": [
+      "人类从未停止前进的脚步，",
+      "即便是片刻——",
+      "我们在困境中成长、调整，然后涅槃重生。"
+    ],
+    "mt_segs_good": [
+      "人类从未停止前进的脚步，",
+      "即便是片刻——",
+      "我们在困境中成长、调整，然后涅槃重生。"
+    ],
+    "mt_segs_bad": [
+      "人类前进的脚步完全停止了，",
+      "即便是片刻——",
+      "我们在困境中成长、调整，然后涅槃重生。"
+    ]
+  },
+  {
+    "case_id": "Case66",
+    "label": "Case 66 (Paltricus Walk)",
+    "src_full": "The cold, rainy night ensued my long overdue walk–exploring the city of Paltricus was a privilege to those who’d been safe from the mutation.",
+    "ref_full": "直到寒冷的雨夜降临，我走了很久——探索Paltricus这座城市真是一种殊荣，对于那些免于突变的幸存者而言。",
+    "mt_full_good": "直到寒冷的雨夜降临，我走了很久——探索Paltricus这座城市真是一种殊荣，对于那些免于突变的幸存者而言。",
+    "mt_full_bad": "直到寒冷的雨夜降临，我走了很久——探索Paltricus这座城市简直是死刑判决，对于那些免于突变的幸存者而言。",
+    "src_segs": [
+      "The cold, rainy night ensued my long overdue walk–",
+      "exploring the city of Paltricus was a privilege ",
+      "to those who’d been safe from the mutation."
+    ],
+    "ref_segs": [
+      "直到寒冷的雨夜降临，我走了很久——",
+      "探索Paltricus这座城市真是一种殊荣，",
+      "对于那些免于突变的幸存者而言。"
+    ],
+    "mt_segs_good": [
+      "直到寒冷的雨夜降临，我走了很久——",
+      "探索Paltricus这座城市真是一种殊荣，",
+      "对于那些免于突变的幸存者而言。"
+    ],
+    "mt_segs_bad": [
+      "直到寒冷的雨夜降临，我走了很久——",
+      "探索Paltricus这座城市简直是死刑判决，",
+      "对于那些免于突变的幸存者而言。"
+    ]
+  },
+  {
+    "case_id": "Case67",
+    "label": "Case 67 (Dangerous Street)",
+    "src_full": "Quick regret flushed over me as I heard footsteps close behind, because nobody hung around this place unless they wanted to get mugged or beaten up.",
+    "ref_full": "听到身后的脚步声时，我立刻后悔了，因为没有人会在这种地方闲逛，除非想被抢劫或被殴打。",
+    "mt_full_good": "听到身后的脚步声时，我立刻后悔了，因为没有人会在这种地方闲逛，除非想被抢劫或被殴打。",
+    "mt_full_bad": "听到身后的脚步声时，我立刻后悔了，因为每个人都喜欢在这里闲逛，毕竟这是全城最安全的地方。",
+    "src_segs": [
+      "Quick regret flushed over me as I heard footsteps close behind, ",
+      "because nobody hung around this place ",
+      "unless they wanted to get mugged or beaten up."
+    ],
+    "ref_segs": [
+      "听到身后的脚步声时，我立刻后悔了，",
+      "因为没有人会在这种地方闲逛，",
+      "除非想被抢劫或被殴打。"
+    ],
+    "mt_segs_good": [
+      "听到身后的脚步声时，我立刻后悔了，",
+      "因为没有人会在这种地方闲逛，",
+      "除非想被抢劫或被殴打。"
+    ],
+    "mt_segs_bad": [
+      "听到身后的脚步声时，我立刻后悔了，",
+      "因为每个人都喜欢在这里闲逛，",
+      "毕竟这是全城最安全的地方。"
+    ]
+  },
+  {
+    "case_id": "Case68",
+    "label": "Case 68 (Alborn Trouble)",
+    "src_full": "No need to stick my nose out for someone, especially when they seem like they’ve just gotten into trouble with every authority in the city.",
+    "ref_full": "我没有必要为别人出头，何况这些家伙看起来好像，刚刚找过本市所有当局的麻烦。",
+    "mt_full_good": "我没有必要为别人出头，何况这些家伙看起来好像，刚刚找过本市所有当局的麻烦。",
+    "mt_full_bad": "我没有必要为别人出头，何况这些家伙看起来好像，刚刚成为了本市所有当局的好朋友。",
+    "src_segs": [
+      "No need to stick my nose out for someone, ",
+      "especially when they seem like ",
+      "they’ve just gotten into trouble with every authority in the city."
+    ],
+    "ref_segs": [
+      "我没有必要为别人出头，",
+      "何况这些家伙看起来好像，",
+      "刚刚找过本市所有当局的麻烦。"
+    ],
+    "mt_segs_good": [
+      "我没有必要为别人出头，",
+      "何况这些家伙看起来好像，",
+      "刚刚找过本市所有当局的麻烦。"
+    ],
+    "mt_segs_bad": [
+      "我没有必要为别人出头，",
+      "何况这些家伙看起来好像，",
+      "刚刚成为了本市所有当局的好朋友。"
+    ]
+  },
+  {
+    "case_id": "Case69",
+    "label": "Case 69 (Alcatraz Name)",
+    "src_full": "I’d done numerous kinds of research on the outer cities, and the capital of the infected, Alcatraz, felt like it fit the name pretty well.",
+    "ref_full": "我曾对外围城区做过很多调查，还有被感染区首都Alcatraz，感觉这个名字还挺贴切。",
+    "mt_full_good": "我曾对外围城区做过很多调查，还有被感染区首都Alcatraz，感觉这个名字还挺贴切。",
+    "mt_full_bad": "我曾对外围城区做过很多调查，还有被感染区首都Alcatraz，感觉这个名字起得真是糟糕透顶。",
+    "src_segs": [
+      "I’d done numerous kinds of research on the outer cities, ",
+      "and the capital of the infected, Alcatraz, ",
+      "felt like it fit the name pretty well."
+    ],
+    "ref_segs": [
+      "我曾对外围城区做过很多调查，",
+      "还有被感染区首都Alcatraz，",
+      "感觉这个名字还挺贴切。"
+    ],
+    "mt_segs_good": [
+      "我曾对外围城区做过很多调查，",
+      "还有被感染区首都Alcatraz，",
+      "感觉这个名字还挺贴切。"
+    ],
+    "mt_segs_bad": [
+      "我曾对外围城区做过很多调查，",
+      "还有被感染区首都Alcatraz，",
+      "感觉这个名字起得真是糟糕透顶。"
+    ]
+  },
+  {
+    "case_id": "Case70",
+    "label": "Case 70 (Thassalin Fire)",
+    "src_full": "A burst of flames erupted from Thassalin's jaws as the colossal Thraki set fire to a very specific patch of forest, then circled above.",
+    "ref_full": "萨萨林从嘴中喷出火焰，高大的斯拉克人点燃了一片森林，然后在上空盘旋。",
+    "mt_full_good": "萨萨林从嘴中喷出火焰，高大的斯拉克人点燃了一片森林，然后在上空盘旋。",
+    "mt_full_bad": "萨萨林从嘴中喷出火焰，高大的斯拉克人给一片森林浇了浇水，然后在上空盘旋。",
+    "src_segs": [
+      "A burst of flames erupted from Thassalin's jaws ",
+      "as the colossal Thraki set fire to a very specific patch of forest, ",
+      "then circled above."
+    ],
+    "ref_segs": [
+      "萨萨林从嘴中喷出火焰，",
+      "高大的斯拉克人点燃了一片森林，",
+      "然后在上空盘旋。"
+    ],
+    "mt_segs_good": [
+      "萨萨林从嘴中喷出火焰，",
+      "高大的斯拉克人点燃了一片森林，",
+      "然后在上空盘旋。"
+    ],
+    "mt_segs_bad": [
+      "萨萨林从嘴中喷出火焰，",
+      "高大的斯拉克人给一片森林浇了浇水，",
+      "然后在上空盘旋。"
+    ]
+  }
+]

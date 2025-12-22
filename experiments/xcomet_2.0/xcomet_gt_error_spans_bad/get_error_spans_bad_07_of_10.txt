@@ -1,0 +1,112 @@
+[
+  {
+    "case_id": "Case61",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 37,
+        "end": 47,
+        "text": "政府完美地为我们服务",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case62",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 34,
+        "end": 50,
+        "text": "“这简直是无与伦比的电影杰作！”",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case63",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 26,
+        "end": 32,
+        "text": "既谦逊又开明",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case64",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 23,
+        "end": 34,
+        "text": "完全像是廉价的塑料玩具",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case65",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 2,
+        "end": 12,
+        "text": "前进的脚步完全停止了",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case66",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 32,
+        "end": 39,
+        "text": "简直是死刑判决",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case67",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 17,
+        "end": 43,
+        "text": "因为每个人都喜欢在这里闲逛，毕竟这是全城最安全的地方",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case68",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 23,
+        "end": 38,
+        "text": "刚刚成为了本市所有当局的好朋友",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case69",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 37,
+        "end": 45,
+        "text": "起得真是糟糕透顶",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case70",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 18,
+        "end": 27,
+        "text": "给一片森林浇了浇水",
+        "error_type": "semantic"
+      }
+    ]
+  }
+]

@@ -1,0 +1,324 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case71",
+    "label": "Case 71 (Kayel Claws)",
+    "src_full": "Kayel clearly didn't agree with Nyssi, he looked less black than normal and his claws had dug into Thassalin's back to the point that he'd made the Thraki bleed.",
+    "ref_full": "卡耶尔显然不同意尼西的说法，他看起来不像正常人那么黑，他的爪子已经深深地扎进了萨萨林的背上，弄得鲜血直流。",
+    "mt_full_good": "卡耶尔显然不同意尼西的说法，他看起来不像正常人那么黑，他的爪子已经深深地扎进了萨萨林的背上，弄得鲜血直流。",
+    "mt_full_bad": "卡耶尔显然不同意尼西的说法，他看起来不像正常人那么黑，他正用爪子温柔地给萨萨林按摩背部。",
+    "src_segs": [
+      "Kayel clearly didn't agree with Nyssi, ",
+      "he looked less black than normal ",
+      "and his claws had dug into Thassalin's back to the point that he'd made the Thraki bleed."
+    ],
+    "ref_segs": [
+      "卡耶尔显然不同意尼西的说法，",
+      "他看起来不像正常人那么黑，",
+      "他的爪子已经深深地扎进了萨萨林的背上，弄得鲜血直流。"
+    ],
+    "mt_segs_good": [
+      "卡耶尔显然不同意尼西的说法，",
+      "他看起来不像正常人那么黑，",
+      "他的爪子已经深深地扎进了萨萨林的背上，弄得鲜血直流。"
+    ],
+    "mt_segs_bad": [
+      "卡耶尔显然不同意尼西的说法，",
+      "他看起来不像正常人那么黑，",
+      "他正用爪子温柔地给萨萨林按摩背部。"
+    ]
+  },
+  {
+    "case_id": "Case72",
+    "label": "Case 72 (Darkness Monster)",
+    "src_full": "Snarling and hissing, the creature flew upwards, spitting into the air, and everything suddenly went dark, as if the monster was sucking the light from the sky.",
+    "ref_full": "它咆哮着，喉咙嘶嘶作响，径直向上飞去，边向空中喷水，突然四周变得漆黑一片，仿佛怪物正在攫取天空中的光明。",
+    "mt_full_good": "它咆哮着，喉咙嘶嘶作响，径直向上飞去，边向空中喷水，突然四周变得漆黑一片，仿佛怪物正在攫取天空中的光明。",
+    "mt_full_bad": "它咆哮着，喉咙嘶嘶作响，径直向上飞去，边向空中喷水，突然四周变得光芒万丈，仿佛怪物正在攫取天空中的光明。",
+    "src_segs": [
+      "Snarling and hissing, the creature flew upwards, spitting into the air, ",
+      "and everything suddenly went dark, ",
+      "as if the monster was sucking the light from the sky."
+    ],
+    "ref_segs": [
+      "它咆哮着，喉咙嘶嘶作响，径直向上飞去，边向空中喷水，",
+      "突然四周变得漆黑一片，",
+      "仿佛怪物正在攫取天空中的光明。"
+    ],
+    "mt_segs_good": [
+      "它咆哮着，喉咙嘶嘶作响，径直向上飞去，边向空中喷水，",
+      "突然四周变得漆黑一片，",
+      "仿佛怪物正在攫取天空中的光明。"
+    ],
+    "mt_segs_bad": [
+      "它咆哮着，喉咙嘶嘶作响，径直向上飞去，边向空中喷水，",
+      "突然四周变得光芒万丈，",
+      "仿佛怪物正在攫取天空中的光明。"
+    ]
+  },
+  {
+    "case_id": "Case73",
+    "label": "Case 73 (Healing Powers)",
+    "src_full": "She was pretty sure she had broken something, but her weird, unnatural healing powers had already kicked in.",
+    "ref_full": "她想自己一定，摔坏了什么地方，但那奇怪、非自然的治愈能力已经开始发挥作用。",
+    "mt_full_good": "她想自己一定，摔坏了什么地方，但那奇怪、非自然的治愈能力已经开始发挥作用。",
+    "mt_full_bad": "她想自己一定，摔坏了什么地方，遗憾的是她那奇怪的治愈能力完全失效了。",
+    "src_segs": [
+      "She was pretty sure ",
+      "she had broken something, ",
+      "but her weird, unnatural healing powers had already kicked in."
+    ],
+    "ref_segs": [
+      "她想自己一定，",
+      "摔坏了什么地方，",
+      "但那奇怪、非自然的治愈能力已经开始发挥作用。"
+    ],
+    "mt_segs_good": [
+      "她想自己一定，",
+      "摔坏了什么地方，",
+      "但那奇怪、非自然的治愈能力已经开始发挥作用。"
+    ],
+    "mt_segs_bad": [
+      "她想自己一定，",
+      "摔坏了什么地方，",
+      "遗憾的是她那奇怪的治愈能力完全失效了。"
+    ]
+  },
+  {
+    "case_id": "Case74",
+    "label": "Case 74 (Surprise Leap)",
+    "src_full": "Before Tenuk and Kayel could ask what the fuck they were looking at, something screeched and leaped out from a nearby bush.",
+    "ref_full": "还没等特努克和卡耶尔开口问，他们究竟看到了什么鬼东西，一个东西尖叫着，从附近的灌木丛里蹿了出来。",
+    "mt_full_good": "还没等特努克和卡耶尔开口问，他们究竟看到了什么鬼东西，一个东西尖叫着，从附近的灌木丛里蹿了出来。",
+    "mt_full_bad": "还没等特努克和卡耶尔开口问，他们究竟看到了什么鬼东西，一只可爱的小狗汪汪叫着从灌木丛里走了出来。",
+    "src_segs": [
+      "Before Tenuk and Kayel could ask ",
+      "what the fuck they were looking at, ",
+      "something screeched and leaped out from a nearby bush."
+    ],
+    "ref_segs": [
+      "还没等特努克和卡耶尔开口问，",
+      "他们究竟看到了什么鬼东西，",
+      "一个东西尖叫着，从附近的灌木丛里蹿了出来。"
+    ],
+    "mt_segs_good": [
+      "还没等特努克和卡耶尔开口问，",
+      "他们究竟看到了什么鬼东西，",
+      "一个东西尖叫着，从附近的灌木丛里蹿了出来。"
+    ],
+    "mt_segs_bad": [
+      "还没等特努克和卡耶尔开口问，",
+      "他们究竟看到了什么鬼东西，",
+      "一只可爱的小狗汪汪叫着从灌木丛里走了出来。"
+    ]
+  },
+  {
+    "case_id": "Case75",
+    "label": "Case 75 (Execution)",
+    "src_full": "As Eirwen approached the wooden pole, the most feared person in the kingdom showed up: The fire user.",
+    "ref_full": "当艾尔文走近木柱时，王国里最可怕的人出现了：他就是火刑的行刑者。",
+    "mt_full_good": "当艾尔文走近木柱时，王国里最可怕的人出现了：他就是火刑的行刑者。",
+    "mt_full_bad": "当艾尔文走近木柱时，王国里最受人喜爱的小丑出现了：他就是火刑的行刑者。",
+    "src_segs": [
+      "As Eirwen approached the wooden pole, ",
+      "the most feared person in the kingdom showed up: ",
+      "The fire user."
+    ],
+    "ref_segs": [
+      "当艾尔文走近木柱时，",
+      "王国里最可怕的人出现了：",
+      "他就是火刑的行刑者。"
+    ],
+    "mt_segs_good": [
+      "当艾尔文走近木柱时，",
+      "王国里最可怕的人出现了：",
+      "他就是火刑的行刑者。"
+    ],
+    "mt_segs_bad": [
+      "当艾尔文走近木柱时，",
+      "王国里最受人喜爱的小丑出现了：",
+      "他就是火刑的行刑者。"
+    ]
+  },
+  {
+    "case_id": "Case76",
+    "label": "Case 76 (Messy Room)",
+    "src_full": "Papers were everywhere, books were scattered about, the desk was broken, and there were multiple ice sculptures scattered about.",
+    "ref_full": "房间里到处都是纸片，书本散落一地，书桌破败不堪，还有很多冰雕散落在各处。",
+    "mt_full_good": "房间里到处都是纸片，书本散落一地，书桌破败不堪，还有很多冰雕散落在各处。",
+    "mt_full_bad": "房间里到处都是纸片，书本整整齐齐，书桌也是崭新的一尘不染，还有很多冰雕散落在各处。",
+    "src_segs": [
+      "Papers were everywhere, ",
+      "books were scattered about, the desk was broken, ",
+      "and there were multiple ice sculptures scattered about."
+    ],
+    "ref_segs": [
+      "房间里到处都是纸片，",
+      "书本散落一地，书桌破败不堪，",
+      "还有很多冰雕散落在各处。"
+    ],
+    "mt_segs_good": [
+      "房间里到处都是纸片，",
+      "书本散落一地，书桌破败不堪，",
+      "还有很多冰雕散落在各处。"
+    ],
+    "mt_segs_bad": [
+      "房间里到处都是纸片，",
+      "书本整整齐齐，书桌也是崭新的一尘不染，",
+      "还有很多冰雕散落在各处。"
+    ]
+  },
+  {
+    "case_id": "Case77",
+    "label": "Case 77 (Combat Gear)",
+    "src_full": "Silently stepping out of his bunk, he put on his combat fatigues, throwing on his assault vest, and packed up his belongings.",
+    "ref_full": "他默默走下床，穿上作战服，套上冲锋衣，再收拾好储物柜里的东西。",
+    "mt_full_good": "他默默走下床，穿上作战服，套上冲锋衣，再收拾好储物柜里的东西。",
+    "mt_full_bad": "他默默走下床，穿上他那鲜艳的粉红色睡衣，再收拾好储物柜里的东西。",
+    "src_segs": [
+      "Silently stepping out of his bunk, ",
+      "he put on his combat fatigues, throwing on his assault vest, ",
+      "and packed up his belongings."
+    ],
+    "ref_segs": [
+      "他默默走下床，",
+      "穿上作战服，套上冲锋衣，",
+      "再收拾好储物柜里的东西。"
+    ],
+    "mt_segs_good": [
+      "他默默走下床，",
+      "穿上作战服，套上冲锋衣，",
+      "再收拾好储物柜里的东西。"
+    ],
+    "mt_segs_bad": [
+      "他默默走下床，",
+      "穿上他那鲜艳的粉红色睡衣，",
+      "再收拾好储物柜里的东西。"
+    ]
+  },
+  {
+    "case_id": "Case78",
+    "label": "Case 78 (FOB Lights)",
+    "src_full": "Cohren and Nemic walked together under the light of the FOB's many lights, which were powered by generators.",
+    "ref_full": "科伦和内米奇并肩行走，沐浴在前方作战基地的灯光下，这些灯是由发电机供电的。",
+    "mt_full_good": "科伦和内米奇并肩行走，沐浴在前方作战基地的灯光下，这些灯是由发电机供电的。",
+    "mt_full_bad": "科伦和内米奇并肩行走，沐浴在前方作战基地的灯光下，这些灯是由一群奔跑的仓鼠供电的。",
+    "src_segs": [
+      "Cohren and Nemic walked together ",
+      "under the light of the FOB's many lights, ",
+      "which were powered by generators."
+    ],
+    "ref_segs": [
+      "科伦和内米奇并肩行走，",
+      "沐浴在前方作战基地的灯光下，",
+      "这些灯是由发电机供电的。"
+    ],
+    "mt_segs_good": [
+      "科伦和内米奇并肩行走，",
+      "沐浴在前方作战基地的灯光下，",
+      "这些灯是由发电机供电的。"
+    ],
+    "mt_segs_bad": [
+      "科伦和内米奇并肩行走，",
+      "沐浴在前方作战基地的灯光下，",
+      "这些灯是由一群奔跑的仓鼠供电的。"
+    ]
+  },
+  {
+    "case_id": "Case79",
+    "label": "Case 79 (Siege Orders)",
+    "src_full": "We are to support the ongoing siege and later attack of Ianlos to flush out the insurgency there.",
+    "ref_full": "我们将支持持续的围困，以及随后对伊安洛斯的攻击，以此清剿那里的叛乱分子。",
+    "mt_full_good": "我们将支持持续的围困，以及随后对伊安洛斯的攻击，以此清剿那里的叛乱分子。",
+    "mt_full_bad": "我们将支持持续的围困，以及随后对伊安洛斯的攻击，以此正式加入那里的叛乱分子。",
+    "src_segs": [
+      "We are to support the ongoing siege ",
+      "and later attack of Ianlos ",
+      "to flush out the insurgency there."
+    ],
+    "ref_segs": [
+      "我们将支持持续的围困，",
+      "以及随后对伊安洛斯的攻击，",
+      "以此清剿那里的叛乱分子。"
+    ],
+    "mt_segs_good": [
+      "我们将支持持续的围困，",
+      "以及随后对伊安洛斯的攻击，",
+      "以此清剿那里的叛乱分子。"
+    ],
+    "mt_segs_bad": [
+      "我们将支持持续的围困，",
+      "以及随后对伊安洛斯的攻击，",
+      "以此正式加入那里的叛乱分子。"
+    ]
+  },
+  {
+    "case_id": "Case80",
+    "label": "Case 80 (Tank Ambush)",
+    "src_full": "Bullets pinged off the tanks side as Shock Troopers leaped off the tanks, taking cover behind them.",
+    "ref_full": "子弹从坦克侧面乒乒乓乓射来，突击队成员纷纷跳下坦克，躲在后面寻找掩护。",
+    "mt_full_good": "子弹从坦克侧面乒乒乓乓射来，突击队成员纷纷跳下坦克，躲在后面寻找掩护。",
+    "mt_full_bad": "子弹从坦克侧面乒乒乓乓射来，突击队成员纷纷跳下坦克，躺在地上享受日光浴。",
+    "src_segs": [
+      "Bullets pinged off the tanks side ",
+      "as Shock Troopers leaped off the tanks, ",
+      "taking cover behind them."
+    ],
+    "ref_segs": [
+      "子弹从坦克侧面乒乒乓乓射来，",
+      "突击队成员纷纷跳下坦克，",
+      "躲在后面寻找掩护。"
+    ],
+    "mt_segs_good": [
+      "子弹从坦克侧面乒乒乓乓射来，",
+      "突击队成员纷纷跳下坦克，",
+      "躲在后面寻找掩护。"
+    ],
+    "mt_segs_bad": [
+      "子弹从坦克侧面乒乒乓乓射来，",
+      "突击队成员纷纷跳下坦克，",
+      "躺在地上享受日光浴。"
+    ]
+  }
+]

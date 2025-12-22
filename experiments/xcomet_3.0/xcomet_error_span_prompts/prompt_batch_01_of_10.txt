@@ -1,0 +1,284 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case1",
+    "label": "Case 1 (Siso landscapes)",
+    "src_full": "Siso's tropical landscapes and seascapes reflect the geographies of his past, employing rich patterns and incorporating people.",
+    "ref_full": "西索的热带风景画和海景画复原过去的地理面貌，运用了丰富的构图，让人物融入其中。",
+    "mt_full_good": "西索的热带风景画和海景画复原过去的地理面貌，运用了丰富的构图，让人物融入其中。",
+    "mt_full_bad": "西索的热带风景画和海景画完全无视了未来的历史，运用了丰富的构图，让人物融入其中。",
+    "src_segs": [
+      "Siso's tropical landscapes and seascapes reflect the geographies of his past, ",
+      "employing rich patterns and incorporating people."
+    ],
+    "ref_segs": [
+      "西索的热带风景画和海景画复原过去的地理面貌，",
+      "运用了丰富的构图，让人物融入其中。"
+    ],
+    "mt_segs_good": [
+      "西索的热带风景画和海景画复原过去的地理面貌，",
+      "运用了丰富的构图，让人物融入其中。"
+    ],
+    "mt_segs_bad": [
+      "西索的热带风景画和海景画完全无视了未来的历史，",
+      "运用了丰富的构图，让人物融入其中。"
+    ]
+  },
+  {
+    "case_id": "Case2",
+    "label": "Case 2 (Sydney transport)",
+    "src_full": "At a much scaled-down level, the same can occur across Sydney's town centres located around transport nodes.",
+    "ref_full": "在更小的层面上，同样的情况也可能发生在悉尼城镇中心，这些中心位于交通枢纽周围。",
+    "mt_full_good": "在更小的层面上，同样的情况也可能发生在悉尼城镇中心，这些中心位于交通枢纽周围。",
+    "mt_full_bad": "在更小的层面上，同样的情况也可能发生在悉尼城镇中心，这些中心位于深海海底之下。",
+    "src_segs": [
+      "At a much scaled-down level, the same can occur across Sydney's town centres ",
+      "located around transport nodes."
+    ],
+    "ref_segs": [
+      "在更小的层面上，同样的情况也可能发生在悉尼城镇中心，",
+      "这些中心位于交通枢纽周围。"
+    ],
+    "mt_segs_good": [
+      "在更小的层面上，同样的情况也可能发生在悉尼城镇中心，",
+      "这些中心位于交通枢纽周围。"
+    ],
+    "mt_segs_bad": [
+      "在更小的层面上，同样的情况也可能发生在悉尼城镇中心，",
+      "这些中心位于深海海底之下。"
+    ]
+  },
+  {
+    "case_id": "Case3",
+    "label": "Case 3 (Smartphone communication)",
+    "src_full": "Our ability to purchase online has changed the way we shop, and friends and family seem closer because of smartphone communication.",
+    "ref_full": "网购能力改变了人们的购物方式，朋友和家人也因为智能手机通讯而显得更加亲密。",
+    "mt_full_good": "网购能力改变了人们的购物方式，朋友和家人也因为智能手机通讯而显得更加亲密。",
+    "mt_full_bad": "网购能力改变了人们的购物方式，朋友和家人也因为智能手机通讯而显得互相仇恨。",
+    "src_segs": [
+      "Our ability to purchase online has changed the way we shop, ",
+      "and friends and family seem closer because of smartphone communication."
+    ],
+    "ref_segs": [
+      "网购能力改变了人们的购物方式，",
+      "朋友和家人也因为智能手机通讯而显得更加亲密。"
+    ],
+    "mt_segs_good": [
+      "网购能力改变了人们的购物方式，",
+      "朋友和家人也因为智能手机通讯而显得更加亲密。"
+    ],
+    "mt_segs_bad": [
+      "网购能力改变了人们的购物方式，",
+      "朋友和家人也因为智能手机通讯而显得互相仇恨。"
+    ]
+  },
+  {
+    "case_id": "Case4",
+    "label": "Case 4 (Iran protests)",
+    "src_full": "In Iran, for example, women have led the greatest threat to the Islamic government in 40 years simply by refusing to comply with laws that force them to cover their hair.",
+    "ref_full": "以伊朗为例，妇女就对伊斯兰政府构成了40年来最大的威胁，仅仅因为拒绝遵守强制她们佩戴头巾的法律。",
+    "mt_full_good": "以伊朗为例，妇女就对伊斯兰政府构成了40年来最大的威胁，仅仅因为拒绝遵守强制她们佩戴头巾的法律。",
+    "mt_full_bad": "以伊朗为例，妇女就对伊斯兰政府构成了40年来最大的威胁，仅仅因为她们非常开心地同意遵守强制佩戴头巾的法律。",
+    "src_segs": [
+      "In Iran, for example, women have led the greatest threat to the Islamic government in 40 years ",
+      "simply by refusing to comply with laws that force them to cover their hair."
+    ],
+    "ref_segs": [
+      "以伊朗为例，妇女就对伊斯兰政府构成了40年来最大的威胁，",
+      "仅仅因为拒绝遵守强制她们佩戴头巾的法律。"
+    ],
+    "mt_segs_good": [
+      "以伊朗为例，妇女就对伊斯兰政府构成了40年来最大的威胁，",
+      "仅仅因为拒绝遵守强制她们佩戴头巾的法律。"
+    ],
+    "mt_segs_bad": [
+      "以伊朗为例，妇女就对伊斯兰政府构成了40年来最大的威胁，",
+      "仅仅因为她们非常开心地同意遵守强制佩戴头巾的法律。"
+    ]
+  },
+  {
+    "case_id": "Case5",
+    "label": "Case 5 (Bangladesh GDP)",
+    "src_full": "Its gross domestic product more than tripled. The change gathered its own momentum.",
+    "ref_full": "孟加拉国国内生产总值增长了两倍多。这种变化积聚了动力。",
+    "mt_full_good": "孟加拉国国内生产总值增长了两倍多。这种变化积聚了动力。",
+    "mt_full_bad": "孟加拉国国内生产总值彻底崩溃归零。这种变化积聚了动力。",
+    "src_segs": [
+      "Its gross domestic product more than tripled. ",
+      "The change gathered its own momentum."
+    ],
+    "ref_segs": [
+      "孟加拉国国内生产总值增长了两倍多。",
+      "这种变化积聚了动力。"
+    ],
+    "mt_segs_good": [
+      "孟加拉国国内生产总值增长了两倍多。",
+      "这种变化积聚了动力。"
+    ],
+    "mt_segs_bad": [
+      "孟加拉国国内生产总值彻底崩溃归零。",
+      "这种变化积聚了动力。"
+    ]
+  },
+  {
+    "case_id": "Case6",
+    "label": "Case 6 (Strike cost)",
+    "src_full": "The rail strike could cost businesses €100m ($110m) a day if it forced them to interrupt production.",
+    "ref_full": "铁路罢工每天可能给企业造成1亿欧元（1.1亿美元）的损失，如果它迫使企业中断生产。",
+    "mt_full_good": "铁路罢工每天可能给企业造成1亿欧元（1.1亿美元）的损失，如果它迫使企业中断生产。",
+    "mt_full_bad": "铁路罢工每年可能只给企业造成几分钱的损失，如果它迫使企业中断生产。",
+    "src_segs": [
+      "The rail strike could cost businesses €100m ($110m) a day ",
+      "if it forced them to interrupt production."
+    ],
+    "ref_segs": [
+      "铁路罢工每天可能给企业造成1亿欧元（1.1亿美元）的损失，",
+      "如果它迫使企业中断生产。"
+    ],
+    "mt_segs_good": [
+      "铁路罢工每天可能给企业造成1亿欧元（1.1亿美元）的损失，",
+      "如果它迫使企业中断生产。"
+    ],
+    "mt_segs_bad": [
+      "铁路罢工每年可能只给企业造成几分钱的损失，",
+      "如果它迫使企业中断生产。"
+    ]
+  },
+  {
+    "case_id": "Case7",
+    "label": "Case 7 (Beer market comparison)",
+    "src_full": "He told Euronews that a market dominated by multinational brewing conglomerates bears no comparison with one comprised almost entirely of small, domestic producers.",
+    "ref_full": "他告诉欧洲新闻台，由跨国啤酒集团主导的市场，与几乎完全由小型国内酿造商组成的市场完全没有可比性。",
+    "mt_full_good": "他告诉欧洲新闻台，由跨国啤酒集团主导的市场，与几乎完全由小型国内酿造商组成的市场完全没有可比性。",
+    "mt_full_bad": "他告诉欧洲新闻台，由跨国啤酒集团主导的市场，与几乎完全由小型国内酿造商组成的市场是一模一样的。",
+    "src_segs": [
+      "He told Euronews that a market dominated by multinational brewing conglomerates ",
+      "bears no comparison with one comprised almost entirely of small, domestic producers."
+    ],
+    "ref_segs": [
+      "他告诉欧洲新闻台，由跨国啤酒集团主导的市场，",
+      "与几乎完全由小型国内酿造商组成的市场完全没有可比性。"
+    ],
+    "mt_segs_good": [
+      "他告诉欧洲新闻台，由跨国啤酒集团主导的市场，",
+      "与几乎完全由小型国内酿造商组成的市场完全没有可比性。"
+    ],
+    "mt_segs_bad": [
+      "他告诉欧洲新闻台，由跨国啤酒集团主导的市场，",
+      "与几乎完全由小型国内酿造商组成的市场是一模一样的。"
+    ]
+  },
+  {
+    "case_id": "Case8",
+    "label": "Case 8 (Recycling support)",
+    "src_full": "They support reuse recycling systems already in place in many countries, he said.",
+    "ref_full": "他们支持再利用回收系统，他说这些系统已经在许多国家实施。",
+    "mt_full_good": "他们支持再利用回收系统，他说这些系统已经在许多国家实施。",
+    "mt_full_bad": "他们强烈反对并试图破坏再利用回收系统，他说这些系统已经在许多国家实施。",
+    "src_segs": [
+      "They support reuse recycling systems ",
+      "already in place in many countries, he said."
+    ],
+    "ref_segs": [
+      "他们支持再利用回收系统，",
+      "他说这些系统已经在许多国家实施。"
+    ],
+    "mt_segs_good": [
+      "他们支持再利用回收系统，",
+      "他说这些系统已经在许多国家实施。"
+    ],
+    "mt_segs_bad": [
+      "他们强烈反对并试图破坏再利用回收系统，",
+      "他说这些系统已经在许多国家实施。"
+    ]
+  },
+  {
+    "case_id": "Case9",
+    "label": "Case 9 (EPA cases)",
+    "src_full": "In fiscal year 2022, the EPA deferred fewer cases to DOJ (88) than at any point since 2000.",
+    "ref_full": "2022财年，美国环保局向美国司法部提交的案件数量（88）比2000财年以来的任何年份都要少。",
+    "mt_full_good": "2022财年，美国环保局向美国司法部提交的案件数量（88）比2000财年以来的任何年份都要少。",
+    "mt_full_bad": "2022财年，美国环保局向美国司法部提交了十亿起案件，比2000财年以来的任何年份都要少。",
+    "src_segs": [
+      "In fiscal year 2022, the EPA deferred fewer cases to DOJ (88) ",
+      "than at any point since 2000."
+    ],
+    "ref_segs": [
+      "2022财年，美国环保局向美国司法部提交的案件数量（88）",
+      "比2000财年以来的任何年份都要少。"
+    ],
+    "mt_segs_good": [
+      "2022财年，美国环保局向美国司法部提交的案件数量（88）",
+      "比2000财年以来的任何年份都要少。"
+    ],
+    "mt_segs_bad": [
+      "2022财年，美国环保局向美国司法部提交了十亿起案件，",
+      "比2000财年以来的任何年份都要少。"
+    ]
+  },
+  {
+    "case_id": "Case10",
+    "label": "Case 10 (Johnson CR support)",
+    "src_full": "Johnson has publicly stated that he would not support a \"continuing resolution\" (CR) to extend the deadline.",
+    "ref_full": "约翰逊曾公开表示，他不会支持“持续决议案”，将截止日期延长。",
+    "mt_full_good": "约翰逊曾公开表示，他不会支持“持续决议案”，将截止日期延长。",
+    "mt_full_bad": "约翰逊曾公开表示，他死也要支持“持续决议案”，将截止日期延长。",
+    "src_segs": [
+      "Johnson has publicly stated that he would not support a \"continuing resolution\" (CR) ",
+      "to extend the deadline."
+    ],
+    "ref_segs": [
+      "约翰逊曾公开表示，他不会支持“持续决议案”，",
+      "将截止日期延长。"
+    ],
+    "mt_segs_good": [
+      "约翰逊曾公开表示，他不会支持“持续决议案”，",
+      "将截止日期延长。"
+    ],
+    "mt_segs_bad": [
+      "约翰逊曾公开表示，他死也要支持“持续决议案”，",
+      "将截止日期延长。"
+    ]
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "case_id": "Case71",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 27,
+        "end": 43,
+        "text": "他正用爪子温柔地给萨萨林按摩背部",
+        "error_type": "hallucination"
+      }
+    ]
+  },
+  {
+    "case_id": "Case72",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 32,
+        "end": 36,
+        "text": "光芒万丈",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case73",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 15,
+        "end": 33,
+        "text": "遗憾的是她那奇怪的治愈能力完全失效了",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case74",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 27,
+        "end": 47,
+        "text": "一只可爱的小狗汪汪叫着从灌木丛里走了出来",
+        "error_type": "hallucination"
+      }
+    ]
+  },
+  {
+    "case_id": "Case75",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 13,
+        "end": 21,
+        "text": "最受人喜爱的小丑",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case76",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 10,
+        "end": 28,
+        "text": "书本整整齐齐，书桌也是崭新的一尘不染",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case77",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 7,
+        "end": 19,
+        "text": "穿上他那鲜艳的粉红色睡衣",
+        "error_type": "hallucination"
+      }
+    ]
+  },
+  {
+    "case_id": "Case78",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 30,
+        "end": 37,
+        "text": "一群奔跑的仓鼠",
+        "error_type": "hallucination"
+      }
+    ]
+  },
+  {
+    "case_id": "Case79",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 26,
+        "end": 37,
+        "text": "正式加入那里的叛乱分子",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case80",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 26,
+        "end": 35,
+        "text": "躺在地上享受日光浴",
+        "error_type": "hallucination"
+      }
+    ]
+  }
+]

@@ -1,0 +1,284 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case51",
+    "label": "Case 51 (Milky Way collision)",
+    "src_full": "More than 4.5 billion years ago, the Milky Way galaxy collided with a nearby dwarf galaxy.",
+    "ref_full": "45亿多年前，银河系与附近的矮星系相撞。",
+    "mt_full_good": "45亿多年前，银河系与附近的矮星系相撞。",
+    "mt_full_bad": "45亿多年前，银河系巧妙地避开了附近的矮星系。",
+    "src_segs": [
+      "More than 4.5 billion years ago, ",
+      "the Milky Way galaxy collided with a nearby dwarf galaxy."
+    ],
+    "ref_segs": [
+      "45亿多年前，",
+      "银河系与附近的矮星系相撞。"
+    ],
+    "mt_segs_good": [
+      "45亿多年前，",
+      "银河系与附近的矮星系相撞。"
+    ],
+    "mt_segs_bad": [
+      "45亿多年前，",
+      "银河系巧妙地避开了附近的矮星系。"
+    ]
+  },
+  {
+    "case_id": "Case52",
+    "label": "Case 52 (Plant fungi)",
+    "src_full": "They do this by forming a special friendship with soil dwelling fungi called mycorrhiza.",
+    "ref_full": "它们通过建立特殊的盟友关系来做到这一点，对象是一种叫做菌根的土栖真菌。",
+    "mt_full_good": "它们通过建立特殊的盟友关系来做到这一点，对象是一种叫做菌根的土栖真菌。",
+    "mt_full_bad": "它们通过宣战并试图消灭对方来做到这一点，对象是一种叫做菌根的土栖真菌。",
+    "src_segs": [
+      "They do this by forming a special friendship ",
+      "with soil dwelling fungi called mycorrhiza."
+    ],
+    "ref_segs": [
+      "它们通过建立特殊的盟友关系来做到这一点，",
+      "对象是一种叫做菌根的土栖真菌。"
+    ],
+    "mt_segs_good": [
+      "它们通过建立特殊的盟友关系来做到这一点，",
+      "对象是一种叫做菌根的土栖真菌。"
+    ],
+    "mt_segs_bad": [
+      "它们通过宣战并试图消灭对方来做到这一点，",
+      "对象是一种叫做菌根的土栖真菌。"
+    ]
+  },
+  {
+    "case_id": "Case53",
+    "label": "Case 53 (Rotterdam)",
+    "src_full": "It is a city that divides opinions because of its more modern and urban- looking architecture.",
+    "ref_full": "这座城市令人们褒贬不一，因为其更加现代、更具都市风情的建筑。",
+    "mt_full_good": "这座城市令人们褒贬不一，因为其更加现代、更具都市风情的建筑。",
+    "mt_full_bad": "这座城市令人们褒贬不一，因为其古老且充满乡村气息的建筑。",
+    "src_segs": [
+      "It is a city that divides opinions ",
+      "because of its more modern and urban- looking architecture."
+    ],
+    "ref_segs": [
+      "这座城市令人们褒贬不一，",
+      "因为其更加现代、更具都市风情的建筑。"
+    ],
+    "mt_segs_good": [
+      "这座城市令人们褒贬不一，",
+      "因为其更加现代、更具都市风情的建筑。"
+    ],
+    "mt_segs_bad": [
+      "这座城市令人们褒贬不一，",
+      "因为其古老且充满乡村气息的建筑。"
+    ]
+  },
+  {
+    "case_id": "Case54",
+    "label": "Case 54 (Roofing intro)",
+    "src_full": "The subject of this video is, if I was to do this roof, and I've never shingled before, how would I do it?",
+    "ref_full": "视频的主题是，如果我要做这个屋顶，而我以前从来没有贴过瓦板，我该怎么办？",
+    "mt_full_good": "视频的主题是，如果我要做这个屋顶，而我以前从来没有贴过瓦板，我该怎么办？",
+    "mt_full_bad": "视频的主题是，如果我要做这个屋顶，而我已经贴了50年瓦板，是世界级专家，我该怎么办？",
+    "src_segs": [
+      "The subject of this video is, if I was to do this roof, ",
+      "and I've never shingled before, how would I do it?"
+    ],
+    "ref_segs": [
+      "视频的主题是，如果我要做这个屋顶，",
+      "而我以前从来没有贴过瓦板，我该怎么办？"
+    ],
+    "mt_segs_good": [
+      "视频的主题是，如果我要做这个屋顶，",
+      "而我以前从来没有贴过瓦板，我该怎么办？"
+    ],
+    "mt_segs_bad": [
+      "视频的主题是，如果我要做这个屋顶，",
+      "而我已经贴了50年瓦板，是世界级专家，我该怎么办？"
+    ]
+  },
+  {
+    "case_id": "Case55",
+    "label": "Case 55 (Tomb Guard)",
+    "src_full": "The Tomb of the Unknown Soldier has been guarded 24 hours a day, seven days a week, 365 days a year, for the past 77 years.",
+    "ref_full": "无名战士墓全天24小时有人把守，过去77年里，每年365天、每周7天都是如此。",
+    "mt_full_good": "无名战士墓全天24小时有人把守，过去77年里，每年365天、每周7天都是如此。",
+    "mt_full_bad": "无名战士墓全天24小时无人看管，过去77年里，每年365天、每周7天都是如此。",
+    "src_segs": [
+      "The Tomb of the Unknown Soldier has been guarded 24 hours a day, ",
+      "seven days a week, 365 days a year, for the past 77 years."
+    ],
+    "ref_segs": [
+      "无名战士墓全天24小时有人把守，",
+      "过去77年里，每年365天、每周7天都是如此。"
+    ],
+    "mt_segs_good": [
+      "无名战士墓全天24小时有人把守，",
+      "过去77年里，每年365天、每周7天都是如此。"
+    ],
+    "mt_segs_bad": [
+      "无名战士墓全天24小时无人看管，",
+      "过去77年里，每年365天、每周7天都是如此。"
+    ]
+  },
+  {
+    "case_id": "Case56",
+    "label": "Case 56 (Yima city)",
+    "src_full": "The Zoroastrian text, Veda, states that Yema built an underground city on the orders of the god Arua Mazda, to protect his people from a catastrophic winner.",
+    "ref_full": "琐罗亚斯德教经典《文迪达》中说，Yima遵照Ahura Mazda神的命令建造了一座地下城市，以保护他的人民度过一个极其艰难的冬天。",
+    "mt_full_good": "琐罗亚斯德教经典《文迪达》中说，Yima遵照Ahura Mazda神的命令建造了一座地下城市，以保护他的人民度过一个极其艰难的冬天。",
+    "mt_full_bad": "琐罗亚斯德教经典《文迪达》中说，Yima遵照Ahura Mazda神的命令建造了一座地下城市，以彻底消灭他的人民并引发灾难。",
+    "src_segs": [
+      "The Zoroastrian text, Veda, states that Yema built an underground city on the orders of the god Arua Mazda, ",
+      "to protect his people from a catastrophic winner."
+    ],
+    "ref_segs": [
+      "琐罗亚斯德教经典《文迪达》中说，Yima遵照Ahura Mazda神的命令建造了一座地下城市，",
+      "以保护他的人民度过一个极其艰难的冬天。"
+    ],
+    "mt_segs_good": [
+      "琐罗亚斯德教经典《文迪达》中说，Yima遵照Ahura Mazda神的命令建造了一座地下城市，",
+      "以保护他的人民度过一个极其艰难的冬天。"
+    ],
+    "mt_segs_bad": [
+      "琐罗亚斯德教经典《文迪达》中说，Yima遵照Ahura Mazda神的命令建造了一座地下城市，",
+      "以彻底消灭他的人民并引发灾难。"
+    ]
+  },
+  {
+    "case_id": "Case57",
+    "label": "Case 57 (ROG Phone)",
+    "src_full": "In this video, we're going to find out if the ROG Phone 5 is truly taking back the crown as the king of gaming.",
+    "ref_full": "在这个视频中，我们要去看看ROG Phone 5是否真的夺回了“游戏手机之王”的宝座。",
+    "mt_full_good": "在这个视频中，我们要去看看ROG Phone 5是否真的夺回了“游戏手机之王”的宝座。",
+    "mt_full_bad": "在这个视频中，我们要去看看ROG Phone 5是否真的惨败并成为了垃圾手机。",
+    "src_segs": [
+      "In this video, we're going to find out ",
+      "if the ROG Phone 5 is truly taking back the crown as the king of gaming."
+    ],
+    "ref_segs": [
+      "在这个视频中，我们要去看看",
+      "ROG Phone 5是否真的夺回了“游戏手机之王”的宝座。"
+    ],
+    "mt_segs_good": [
+      "在这个视频中，我们要去看看",
+      "ROG Phone 5是否真的夺回了“游戏手机之王”的宝座。"
+    ],
+    "mt_segs_bad": [
+      "在这个视频中，我们要去看看",
+      "ROG Phone 5是否真的惨败并成为了垃圾手机。"
+    ]
+  },
+  {
+    "case_id": "Case58",
+    "label": "Case 58 (Cooking water)",
+    "src_full": "We're primarily boiling water so that we can rehydrate our food.",
+    "ref_full": "我们主要是烧开水，以便给食物补充水分。",
+    "mt_full_good": "我们主要是烧开水，以便给食物补充水分。",
+    "mt_full_bad": "我们主要是把水冷冻成冰，以便给食物补充水分。",
+    "src_segs": [
+      "We're primarily boiling water ",
+      "so that we can rehydrate our food."
+    ],
+    "ref_segs": [
+      "我们主要是烧开水，",
+      "以便给食物补充水分。"
+    ],
+    "mt_segs_good": [
+      "我们主要是烧开水，",
+      "以便给食物补充水分。"
+    ],
+    "mt_segs_bad": [
+      "我们主要是把水冷冻成冰，",
+      "以便给食物补充水分。"
+    ]
+  },
+  {
+    "case_id": "Case59",
+    "label": "Case 59 (Snowball Earth)",
+    "src_full": "The thick cloud cover prevented sunlight from reaching the surface of the Earth.",
+    "ref_full": "厚厚的云层阻挡了阳光到达地球表面。",
+    "mt_full_good": "厚厚的云层阻挡了阳光到达地球表面。",
+    "mt_full_bad": "厚厚的云层让阳光更加强烈地照射到地球表面。",
+    "src_segs": [
+      "The thick cloud cover ",
+      "prevented sunlight from reaching the surface of the Earth."
+    ],
+    "ref_segs": [
+      "厚厚的云层",
+      "阻挡了阳光到达地球表面。"
+    ],
+    "mt_segs_good": [
+      "厚厚的云层",
+      "阻挡了阳光到达地球表面。"
+    ],
+    "mt_segs_bad": [
+      "厚厚的云层",
+      "让阳光更加强烈地照射到地球表面。"
+    ]
+  },
+  {
+    "case_id": "Case60",
+    "label": "Case 60 (Fake news stats)",
+    "src_full": "According to a Stanford study, only 25 % of high school students were able to identify an accurate news story compared to a fake one.",
+    "ref_full": "根据斯坦福大学的一项研究，只有25%的高中生能够识别准确的新闻报道与假新闻。",
+    "mt_full_good": "根据斯坦福大学的一项研究，只有25%的高中生能够识别准确的新闻报道与假新闻。",
+    "mt_full_bad": "根据斯坦福大学的一项研究，每一个高中生能够识别准确的新闻报道与假新闻。",
+    "src_segs": [
+      "According to a Stanford study, only 25 % of high school students ",
+      "were able to identify an accurate news story compared to a fake one."
+    ],
+    "ref_segs": [
+      "根据斯坦福大学的一项研究，只有25%的高中生",
+      "能够识别准确的新闻报道与假新闻。"
+    ],
+    "mt_segs_good": [
+      "根据斯坦福大学的一项研究，只有25%的高中生",
+      "能够识别准确的新闻报道与假新闻。"
+    ],
+    "mt_segs_bad": [
+      "根据斯坦福大学的一项研究，每一个高中生",
+      "能够识别准确的新闻报道与假新闻。"
+    ]
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      { "start": 12, "end": 22, "text": "完全无视了未来的历史", "error_type": "semantic" }
+    ]
+  },
+  {
+    "case_id": "Case2",
+    "gt_error_spans_full_bad": [
+      { "start": 32, "end": 38, "text": "深海海底之下", "error_type": "hallucination" }
+    ]
+  },
+  {
+    "case_id": "Case3",
+    "gt_error_spans_full_bad": [
+      { "start": 32, "end": 36, "text": "互相仇恨", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case4",
+    "gt_error_spans_full_bad": [
+      { "start": 34, "end": 43, "text": "非常开心地同意遵守", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case5",
+    "gt_error_spans_full_bad": [
+      { "start": 10, "end": 16, "text": "彻底崩溃归零", "error_type": "factual" }
+    ]
+  },
+  {
+    "case_id": "Case6",
+    "gt_error_spans_full_bad": [
+      { "start": 4, "end": 20, "text": "每年可能只给企业造成几分钱的损失", "error_type": "factual" }
+    ]
+  },
+  {
+    "case_id": "Case7",
+    "gt_error_spans_full_bad": [
+      { "start": 40, "end": 46, "text": "是一模一样的", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case8",
+    "gt_error_spans_full_bad": [
+      { "start": 2, "end": 11, "text": "强烈反对并试图破坏", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case9",
+    "gt_error_spans_full_bad": [
+      { "start": 18, "end": 26, "text": "提交了十亿起案件", "error_type": "factual" }
+    ]
+  },
+  {
+    "case_id": "Case10",
+    "gt_error_spans_full_bad": [
+      { "start": 10, "end": 15, "text": "死也要支持", "error_type": "polarity" }
+    ]
+  }
+]

@@ -1,0 +1,328 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case91",
+    "label": "Case 91 (Betta Edu)",
+    "src_full": "The minister has faced significant public backlash following the exposure of a leaked memo where she purportedly instructed Oluwatoyin Madein, the Accountant-General (AG) of the federation, to transfer N585 million to a private account.",
+    "ref_full": "这位部长遭到了公众的强烈反对，在一份泄露的备忘录曝光后，她在备忘录中指示Oluwatoyin Madein将5.85亿奈拉转入一个私人账户。",
+    "mt_full_good": "这位部长遭到了公众的强烈反对，在一份泄露的备忘录曝光后，她在备忘录中指示Oluwatoyin Madein将5.85亿奈拉转入一个私人账户。",
+    "mt_full_bad": "这位部长受到了公众的热烈支持，在一份泄露的备忘录曝光后，她在备忘录中指示将5.85亿奈拉捐给慈善机构。",
+    "src_segs": [
+      "The minister has faced significant public backlash ",
+      "following the exposure of a leaked memo ",
+      "where she purportedly instructed Oluwatoyin Madein, the Accountant-General (AG) of the federation, to transfer N585 million to a private account."
+    ],
+    "ref_segs": [
+      "这位部长遭到了公众的强烈反对，",
+      "在一份泄露的备忘录曝光后，",
+      "她在备忘录中指示Oluwatoyin Madein将5.85亿奈拉转入一个私人账户。"
+    ],
+    "mt_segs_good": [
+      "这位部长遭到了公众的强烈反对，",
+      "在一份泄露的备忘录曝光后，",
+      "她在备忘录中指示Oluwatoyin Madein将5.85亿奈拉转入一个私人账户。"
+    ],
+    "mt_segs_bad": [
+      "这位部长受到了公众的热烈支持，",
+      "在一份泄露的备忘录曝光后，",
+      "她在备忘录中指示将5.85亿奈拉捐给慈善机构。"
+    ]
+  },
+  {
+    "case_id": "Case92",
+    "label": "Case 92 (Bank Official)",
+    "src_full": "He added that unless she can provide a valid reason for such approval, it may not necessarily involve fraudulent intent, but it is nonetheless incorrect, and certainty is lacking.",
+    "ref_full": "他补充道，除非她能为这种批准提供正当理由，这不一定涉及欺诈意图，但尽管如此也是不正确的，且缺乏确定性。",
+    "mt_full_good": "他补充道，除非她能为这种批准提供正当理由，这不一定涉及欺诈意图，但尽管如此也是不正确的，且缺乏确定性。",
+    "mt_full_bad": "他补充道，即使她提供了批准的正当理由，这也肯定涉及欺诈意图，而且是完全正确和确定的。",
+    "src_segs": [
+      "He added that unless she can provide a valid reason for such approval, ",
+      "it may not necessarily involve fraudulent intent, ",
+      "but it is nonetheless incorrect, and certainty is lacking."
+    ],
+    "ref_segs": [
+      "他补充道，除非她能为这种批准提供正当理由，",
+      "这不一定涉及欺诈意图，",
+      "但尽管如此也是不正确的，且缺乏确定性。"
+    ],
+    "mt_segs_good": [
+      "他补充道，除非她能为这种批准提供正当理由，",
+      "这不一定涉及欺诈意图，",
+      "但尽管如此也是不正确的，且缺乏确定性。"
+    ],
+    "mt_segs_bad": [
+      "他补充道，即使她提供了批准的正当理由，",
+      "这也肯定涉及欺诈意图，",
+      "而且是完全正确和确定的。"
+    ]
+  },
+  {
+    "case_id": "Case93",
+    "label": "Case 93 (Celeste Pride)",
+    "src_full": "Celeste is so proud of its tiny parent game it throws in references like the memorial, the \"2000 M... 2500 M...\" progression, the power-up, the flag at the top.",
+    "ref_full": "《Celeste》对自己的亲子小游戏非常自豪，它在游戏中加入了纪念物、“2000米……2500米……”进程、强化道具、顶部旗帜等元素。",
+    "mt_full_good": "《Celeste》对自己的亲子小游戏非常自豪，它在游戏中加入了纪念物、“2000米……2500米……”进程、强化道具、顶部旗帜等元素。",
+    "mt_full_bad": "《Celeste》对自己的亲子小游戏感到非常羞耻，它删除了所有相关的纪念物、“2000米……2500米……”进程、强化道具、顶部旗帜等元素。",
+    "src_segs": [
+      "Celeste is so proud of its tiny parent game ",
+      "it throws in references like the memorial, ",
+      "the \"2000 M... 2500 M...\" progression, the power-up, the flag at the top."
+    ],
+    "ref_segs": [
+      "《Celeste》对自己的亲子小游戏非常自豪，",
+      "它在游戏中加入了纪念物、",
+      "“2000米……2500米……”进程、强化道具、顶部旗帜等元素。"
+    ],
+    "mt_segs_good": [
+      "《Celeste》对自己的亲子小游戏非常自豪，",
+      "它在游戏中加入了纪念物、",
+      "“2000米……2500米……”进程、强化道具、顶部旗帜等元素。"
+    ],
+    "mt_segs_bad": [
+      "《Celeste》对自己的亲子小游戏感到非常羞耻，",
+      "它删除了所有相关的纪念物、",
+      "“2000米……2500米……”进程、强化道具、顶部旗帜等元素。"
+    ]
+  },
+  {
+    "case_id": "Case94",
+    "label": "Case 94 (Celeste Incarnation)",
+    "src_full": "I think that would've been my favorite incarnation as like, an emotional arc... as is, the main single player arc of the commercial game is ultimately a small piece of it.",
+    "ref_full": "我认为那会是我最喜欢的化身，就像情感弧线……事实上，商业游戏的主要单人模式故事线最终只是其中的一小部分。",
+    "mt_full_good": "我认为那会是我最喜欢的化身，就像情感弧线……事实上，商业游戏的主要单人模式故事线最终只是其中的一小部分。",
+    "mt_full_bad": "我认为那是我最讨厌的化身，没有任何情感弧线……事实上，商业游戏的主要单人模式故事线是其全部内容，占据了100%的比例。",
+    "src_segs": [
+      "I think that would've been my favorite incarnation as like, an emotional arc... ",
+      "as is, the main single player arc of the commercial game ",
+      "is ultimately a small piece of it."
+    ],
+    "ref_segs": [
+      "我认为那会是我最喜欢的化身，就像情感弧线……",
+      "事实上，商业游戏的主要单人模式故事线",
+      "最终只是其中的一小部分。"
+    ],
+    "mt_segs_good": [
+      "我认为那会是我最喜欢的化身，就像情感弧线……",
+      "事实上，商业游戏的主要单人模式故事线",
+      "最终只是其中的一小部分。"
+    ],
+    "mt_segs_bad": [
+      "我认为那是我最讨厌的化身，没有任何情感弧线……",
+      "事实上，商业游戏的主要单人模式故事线",
+      "是其全部内容，占据了100%的比例。"
+    ]
+  },
+  {
+    "case_id": "Case95",
+    "label": "Case 95 (Brain Sides)",
+    "src_full": "But when using both the creative (i.e., guitar, painting, etc.) and analytical sides of my brain, it feels as though I increased my mental capacity — making me better in both spaces.",
+    "ref_full": "但是，当我同时使用大脑的创造功能和分析功能时，感觉自己的脑容量有所增加，让我在这两个领域都变得更好。",
+    "mt_full_good": "但是，当我同时使用大脑的创造功能和分析功能时，感觉自己的脑容量有所增加，让我在这两个领域都变得更好。",
+    "mt_full_bad": "但是，当我只使用大脑的创造功能而忽略分析功能时，感觉自己的脑容量明显萎缩，让我在这两个领域都变得更糟。",
+    "src_segs": [
+      "But when using both the creative (i.e., guitar, painting, etc.) and analytical sides of my brain, ",
+      "it feels as though I increased my mental capacity ",
+      "— making me better in both spaces."
+    ],
+    "ref_segs": [
+      "但是，当我同时使用大脑的创造功能和分析功能时，",
+      "感觉自己的脑容量有所增加，",
+      "让我在这两个领域都变得更好。"
+    ],
+    "mt_segs_good": [
+      "但是，当我同时使用大脑的创造功能和分析功能时，",
+      "感觉自己的脑容量有所增加，",
+      "让我在这两个领域都变得更好。"
+    ],
+    "mt_segs_bad": [
+      "但是，当我只使用大脑的创造功能而忽略分析功能时，",
+      "感觉自己的脑容量明显萎缩，",
+      "让我在这两个领域都变得更糟。"
+    ]
+  },
+  {
+    "case_id": "Case96",
+    "label": "Case 96 (Political Roles)",
+    "src_full": "And i do like characters having long conversations, superbly aware of their political roles and yet ignorant to their emotional needs. Part of growing up.",
+    "ref_full": "我也喜欢人物长时间的对话，他们非常清楚自己的政治角色，但对情感需求一无所知。这是成长的一部分吧。",
+    "mt_full_good": "我也喜欢人物长时间的对话，他们非常清楚自己的政治角色，但对情感需求一无所知。这是成长的一部分吧。",
+    "mt_full_bad": "我讨厌人物长时间的对话，他们对自己的政治角色一无所知，但对情感需求了如指掌。这是成长的一部分吧。",
+    "src_segs": [
+      "And i do like characters having long conversations, ",
+      "superbly aware of their political roles ",
+      "and yet ignorant to their emotional needs. ",
+      "Part of growing up."
+    ],
+    "ref_segs": [
+      "我也喜欢人物长时间的对话，",
+      "他们非常清楚自己的政治角色，",
+      "但对情感需求一无所知。",
+      "这是成长的一部分吧。"
+    ],
+    "mt_segs_good": [
+      "我也喜欢人物长时间的对话，",
+      "他们非常清楚自己的政治角色，",
+      "但对情感需求一无所知。",
+      "这是成长的一部分吧。"
+    ],
+    "mt_segs_bad": [
+      "我讨厌人物长时间的对话，",
+      "他们对自己的政治角色一无所知，",
+      "但对情感需求了如指掌。",
+      "这是成长的一部分吧。"
+    ]
+  },
+  {
+    "case_id": "Case97",
+    "label": "Case 97 (Introvert Ads)",
+    "src_full": "Advertise here, follow the algorithm, share your personality. Get a blue tick on that service, be available 24/7, answer inquiries with a video of yourself, respond immediately.",
+    "ref_full": "在这里做广告，遵循算法，分享个性。在该服务上获得蓝勾认证，全天候待命，用自己的视频回答询问，立即回应。",
+    "mt_full_good": "在这里做广告，遵循算法，分享个性。在该服务上获得蓝勾认证，全天候待命，用自己的视频回答询问，立即回应。",
+    "mt_full_bad": "不要在这里做广告，无视算法，隐藏个性。在该服务上获得蓝勾认证，全天候待命，永远不要回答询问，或者用假视频回应。",
+    "src_segs": [
+      "Advertise here, follow the algorithm, share your personality. ",
+      "Get a blue tick on that service, be available 24/7, ",
+      "answer inquiries with a video of yourself, respond immediately."
+    ],
+    "ref_segs": [
+      "在这里做广告，遵循算法，分享个性。",
+      "在该服务上获得蓝勾认证，全天候待命，",
+      "用自己的视频回答询问，立即回应。"
+    ],
+    "mt_segs_good": [
+      "在这里做广告，遵循算法，分享个性。",
+      "在该服务上获得蓝勾认证，全天候待命，",
+      "用自己的视频回答询问，立即回应。"
+    ],
+    "mt_segs_bad": [
+      "不要在这里做广告，无视算法，隐藏个性。",
+      "在该服务上获得蓝勾认证，全天候待命，",
+      "永远不要回答询问，或者用假视频回应。"
+    ]
+  },
+  {
+    "case_id": "Case98",
+    "label": "Case 98 (Air Purifier)",
+    "src_full": "It feels uncomfortably passive aggressive turning up my air purifier to max, but I can smell the wood dust, so it would be justified even if he weren't an anti-masker.",
+    "ref_full": "把空气净化器调到最大档感觉有点消极攻击的不适感，但我能闻到木屑味，所以即使他不是反口罩人士，这也是合理的。",
+    "mt_full_good": "把空气净化器调到最大档感觉有点消极攻击的不适感，但我能闻到木屑味，所以即使他不是反口罩人士，这也是合理的。",
+    "mt_full_bad": "把空气净化器关掉感觉很舒服，但我闻到花香的味道，所以这是毫无道理的，即使他戴了口罩。",
+    "src_segs": [
+      "It feels uncomfortably passive aggressive turning up my air purifier to max, ",
+      "but I can smell the wood dust, ",
+      "so it would be justified even if he weren't an anti-masker."
+    ],
+    "ref_segs": [
+      "把空气净化器调到最大档感觉有点消极攻击的不适感，",
+      "但我能闻到木屑味，",
+      "所以即使他不是反口罩人士，这也是合理的。"
+    ],
+    "mt_segs_good": [
+      "把空气净化器调到最大档感觉有点消极攻击的不适感，",
+      "但我能闻到木屑味，",
+      "所以即使他不是反口罩人士，这也是合理的。"
+    ],
+    "mt_segs_bad": [
+      "把空气净化器关掉感觉很舒服，",
+      "但我闻到花香的味道，",
+      "所以这是毫无道理的，即使他戴了口罩。"
+    ]
+  },
+  {
+    "case_id": "Case99",
+    "label": "Case 99 (HTML Stream)",
+    "src_full": "It would be streamed out of order, but the browser would assemble the HTML document as if it were streamed in order.",
+    "ref_full": "它将乱序流式传输，但浏览器会组装HTML文档，就像它是按顺序流式传输一样。",
+    "mt_full_good": "它将乱序流式传输，但浏览器会组装HTML文档，就像它是按顺序流式传输一样。",
+    "mt_full_bad": "它将严格按顺序流式传输，但浏览器会将HTML文档撕碎，就像它从未被流式传输过一样。",
+    "src_segs": [
+      "It would be streamed out of order, ",
+      "but the browser would assemble the HTML document ",
+      "as if it were streamed in order."
+    ],
+    "ref_segs": [
+      "它将乱序流式传输，",
+      "但浏览器会组装HTML文档，",
+      "就像它是按顺序流式传输一样。"
+    ],
+    "mt_segs_good": [
+      "它将乱序流式传输，",
+      "但浏览器会组装HTML文档，",
+      "就像它是按顺序流式传输一样。"
+    ],
+    "mt_segs_bad": [
+      "它将严格按顺序流式传输，",
+      "但浏览器会将HTML文档撕碎，",
+      "就像它从未被流式传输过一样。"
+    ]
+  },
+  {
+    "case_id": "Case100",
+    "label": "Case 100 (Congressman Votes)",
+    "src_full": "So that kind of famously as a Congressman explained to all of your votes on Facebook, which is a rare concession by authority to say, okay, this is why I did what I did.",
+    "ref_full": "众所周知，你作为国会议员在Facebook上解释了所有的投票，这是当权者罕见的让步，即好吧，这就是我这么做的原因。",
+    "mt_full_good": "众所周知，你作为国会议员在Facebook上解释了所有的投票，这是当权者罕见的让步，即好吧，这就是我这么做的原因。",
+    "mt_full_bad": "众所周知，您作为国会议员，在Facebook上隐瞒了所有投票理由，这是当权者常见的傲慢表现，说，“闭嘴，我不需要解释我做了什么。”",
+    "src_segs": [
+      "So that kind of famously as a Congressman explained to all of your votes on Facebook, ",
+      "which is a rare concession by authority to say, ",
+      "okay, this is why I did what I did."
+    ],
+    "ref_segs": [
+      "众所周知，你作为国会议员在Facebook上解释了所有的投票，",
+      "这是当权者罕见的让步，即",
+      "好吧，这就是我这么做的原因。"
+    ],
+    "mt_segs_good": [
+      "众所周知，你作为国会议员在Facebook上解释了所有的投票，",
+      "这是当权者罕见的让步，即",
+      "好吧，这就是我这么做的原因。"
+    ],
+    "mt_segs_bad": [
+      "众所周知，您作为国会议员，在Facebook上隐瞒了所有投票理由，",
+      "这是当权者常见的傲慢表现，说，",
+      "“闭嘴，我不需要解释我做了什么。”"
+    ]
+  }
+]

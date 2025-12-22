@@ -1,0 +1,284 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case41",
+    "label": "Case 41 (Aluminum age)",
+    "src_full": "What is it that has made aluminum, one of the youngest members in the family of metals, such an outstanding material?",
+    "ref_full": "铝是“金属家族”中最年轻的成员之一，是什么让它成为如此出色的材料呢？",
+    "mt_full_good": "铝是“金属家族”中最年轻的成员之一，是什么让它成为如此出色的材料呢？",
+    "mt_full_bad": "铝是“金属家族”中最古老的成员之一，是什么让它成为如此出色的材料呢？",
+    "src_segs": [
+      "What is it that has made aluminum, one of the youngest members in the family of metals, ",
+      "such an outstanding material?"
+    ],
+    "ref_segs": [
+      "铝是“金属家族”中最年轻的成员之一，",
+      "是什么让它成为如此出色的材料呢？"
+    ],
+    "mt_segs_good": [
+      "铝是“金属家族”中最年轻的成员之一，",
+      "是什么让它成为如此出色的材料呢？"
+    ],
+    "mt_segs_bad": [
+      "铝是“金属家族”中最古老的成员之一，",
+      "是什么让它成为如此出色的材料呢？"
+    ]
+  },
+  {
+    "case_id": "Case42",
+    "label": "Case 42 (Milgram Harvard)",
+    "src_full": "Initial applications to Harvard for a psychology masters were rejected, but was eventually admitted.",
+    "ref_full": "他最初申请哈佛大学心理学硕士学位被拒，但最终还是被录取了。",
+    "mt_full_good": "他最初申请哈佛大学心理学硕士学位被拒，但最终还是被录取了。",
+    "mt_full_bad": "他最初申请哈佛大学心理学硕士学位被立即录取，但最终还是被录取了。",
+    "src_segs": [
+      "Initial applications to Harvard for a psychology masters were rejected, ",
+      "but was eventually admitted."
+    ],
+    "ref_segs": [
+      "他最初申请哈佛大学心理学硕士学位被拒，",
+      "但最终还是被录取了。"
+    ],
+    "mt_segs_good": [
+      "他最初申请哈佛大学心理学硕士学位被拒，",
+      "但最终还是被录取了。"
+    ],
+    "mt_segs_bad": [
+      "他最初申请哈佛大学心理学硕士学位被立即录取，",
+      "但最终还是被录取了。"
+    ]
+  },
+  {
+    "case_id": "Case43",
+    "label": "Case 43 (Teenager tragedy)",
+    "src_full": "A teenager is dead after police found her body in an eastside ditch.",
+    "ref_full": "一名少女已确认死亡，警方在东区的沟渠里发现了她的尸体。",
+    "mt_full_good": "一名少女已确认死亡，警方在东区的沟渠里发现了她的尸体。",
+    "mt_full_bad": "一名少女正在开派对，警方在东区的沟渠里发现了她的尸体。",
+    "src_segs": [
+      "A teenager is dead ",
+      "after police found her body in an eastside ditch."
+    ],
+    "ref_segs": [
+      "一名少女已确认死亡，",
+      "警方在东区的沟渠里发现了她的尸体。"
+    ],
+    "mt_segs_good": [
+      "一名少女已确认死亡，",
+      "警方在东区的沟渠里发现了她的尸体。"
+    ],
+    "mt_segs_bad": [
+      "一名少女正在开派对，",
+      "警方在东区的沟渠里发现了她的尸体。"
+    ]
+  },
+  {
+    "case_id": "Case44",
+    "label": "Case 44 (Game ping)",
+    "src_full": "My ping is fine. Anyways yeah you can see what I mean by the frame rate.",
+    "ref_full": "我的ping没问题。不管怎样。对，你明白我说的帧率是什么意思吧。",
+    "mt_full_good": "我的ping没问题。不管怎样。对，你明白我说的帧率是什么意思吧。",
+    "mt_full_bad": "我的网络完全断开了。不管怎样。对，你明白我说的帧率是什么意思吧。",
+    "src_segs": [
+      "My ping is fine. ",
+      "Anyways yeah you can see what I mean by the frame rate."
+    ],
+    "ref_segs": [
+      "我的ping没问题。",
+      "不管怎样。对，你明白我说的帧率是什么意思吧。"
+    ],
+    "mt_segs_good": [
+      "我的ping没问题。",
+      "不管怎样。对，你明白我说的帧率是什么意思吧。"
+    ],
+    "mt_segs_bad": [
+      "我的网络完全断开了。",
+      "不管怎样。对，你明白我说的帧率是什么意思吧。"
+    ]
+  },
+  {
+    "case_id": "Case45",
+    "label": "Case 45 (Electronics IC)",
+    "src_full": "Now we can see this IC is dislocated from the PCB. We can see the condition of this IC.",
+    "ref_full": "现在我们可以看到，这个IC从PCB板上脱落了。我们可以看到这个IC的状况。",
+    "mt_full_good": "现在我们可以看到，这个IC从PCB板上脱落了。我们可以看到这个IC的状况。",
+    "mt_full_bad": "现在我们可以看到，这个IC完美地焊接在PCB板上。我们可以看到这个IC的状况。",
+    "src_segs": [
+      "Now we can see this IC is dislocated from the PCB. ",
+      "We can see the condition of this IC."
+    ],
+    "ref_segs": [
+      "现在我们可以看到，这个IC从PCB板上脱落了。",
+      "我们可以看到这个IC的状况。"
+    ],
+    "mt_segs_good": [
+      "现在我们可以看到，这个IC从PCB板上脱落了。",
+      "我们可以看到这个IC的状况。"
+    ],
+    "mt_segs_bad": [
+      "现在我们可以看到，这个IC完美地焊接在PCB板上。",
+      "我们可以看到这个IC的状况。"
+    ]
+  },
+  {
+    "case_id": "Case46",
+    "label": "Case 46 (Lalabella distance)",
+    "src_full": "The king, Labella, is said to have travelled the 1,600 miles to Jerusalem.",
+    "ref_full": "据说国王拉利贝拉曾跋涉1600英里来到耶路撒冷。",
+    "mt_full_good": "据说国王拉利贝拉曾跋涉1600英里来到耶路撒冷。",
+    "mt_full_bad": "据说国王拉利贝拉曾跋涉100米来到耶路撒冷。",
+    "src_segs": [
+      "The king, Labella, is said to have travelled ",
+      "the 1,600 miles to Jerusalem."
+    ],
+    "ref_segs": [
+      "据说国王拉利贝拉曾跋涉",
+      "1600英里来到耶路撒冷。"
+    ],
+    "mt_segs_good": [
+      "据说国王拉利贝拉曾跋涉",
+      "1600英里来到耶路撒冷。"
+    ],
+    "mt_segs_bad": [
+      "据说国王拉利贝拉曾跋涉",
+      "100米来到耶路撒冷。"
+    ]
+  },
+  {
+    "case_id": "Case47",
+    "label": "Case 47 (Mars volcano)",
+    "src_full": "To do that, there's a volcano on Mars, 81,000 feet tall, almost three times taller than Everest.",
+    "ref_full": "火星上有一座火山，高81000英尺，几乎是珠穆朗玛峰的三倍。",
+    "mt_full_good": "火星上有一座火山，高81000英尺，几乎是珠穆朗玛峰的三倍。",
+    "mt_full_bad": "火星上有一座小土丘，只有几英尺高，几乎是珠穆朗玛峰的三倍。",
+    "src_segs": [
+      "To do that, there's a volcano on Mars, 81,000 feet tall, ",
+      "almost three times taller than Everest."
+    ],
+    "ref_segs": [
+      "火星上有一座火山，高81000英尺，",
+      "几乎是珠穆朗玛峰的三倍。"
+    ],
+    "mt_segs_good": [
+      "火星上有一座火山，高81000英尺，",
+      "几乎是珠穆朗玛峰的三倍。"
+    ],
+    "mt_segs_bad": [
+      "火星上有一座小土丘，只有几英尺高，",
+      "几乎是珠穆朗玛峰的三倍。"
+    ]
+  },
+  {
+    "case_id": "Case48",
+    "label": "Case 48 (Kerensky)",
+    "src_full": "Mr. Alexander Kerensky, president of the Democratic Provisional Government of Russia, overthrown by the Communists in 1917.",
+    "ref_full": "亚历山大·克伦斯基先生，他是俄国民主临时政府的总统，在1917年被共产党推翻。",
+    "mt_full_good": "亚历山大·克伦斯基先生，他是俄国民主临时政府的总统，在1917年被共产党推翻。",
+    "mt_full_bad": "亚历山大·克伦斯基先生，他是俄国民主临时政府的总统，在1917年被共产党任命。",
+    "src_segs": [
+      "Mr. Alexander Kerensky, president of the Democratic Provisional Government of Russia, ",
+      "overthrown by the Communists in 1917."
+    ],
+    "ref_segs": [
+      "亚历山大·克伦斯基先生，他是俄国民主临时政府的总统，",
+      "在1917年被共产党推翻。"
+    ],
+    "mt_segs_good": [
+      "亚历山大·克伦斯基先生，他是俄国民主临时政府的总统，",
+      "在1917年被共产党推翻。"
+    ],
+    "mt_segs_bad": [
+      "亚历山大·克伦斯基先生，他是俄国民主临时政府的总统，",
+      "在1917年被共产党任命。"
+    ]
+  },
+  {
+    "case_id": "Case49",
+    "label": "Case 49 (Robot hand)",
+    "src_full": "I'm not freaked out by it's... All right, fine. I'm freaked out.",
+    "ref_full": "我没有被吓到，只是……好的，行。我是被吓坏了。",
+    "mt_full_good": "我没有被吓到，只是……好的，行。我是被吓坏了。",
+    "mt_full_bad": "我被它吓得半死，天啊……好的，行。我是被吓坏了。",
+    "src_segs": [
+      "I'm not freaked out by it's... ",
+      "All right, fine. I'm freaked out."
+    ],
+    "ref_segs": [
+      "我没有被吓到，只是……",
+      "好的，行。我是被吓坏了。"
+    ],
+    "mt_segs_good": [
+      "我没有被吓到，只是……",
+      "好的，行。我是被吓坏了。"
+    ],
+    "mt_segs_bad": [
+      "我被它吓得半死，天啊……",
+      "好的，行。我是被吓坏了。"
+    ]
+  },
+  {
+    "case_id": "Case50",
+    "label": "Case 50 (Book spine)",
+    "src_full": "So what I'm going to do first for the spine repair is I need to remove this old spine.",
+    "ref_full": "为了修复书脊，我首先要做的就是，我需要去除这个旧书脊。",
+    "mt_full_good": "为了修复书脊，我首先要做的就是，我需要去除这个旧书脊。",
+    "mt_full_bad": "为了修复书脊，我首先要做的就是，我需要永久保留这个旧书脊。",
+    "src_segs": [
+      "So what I'm going to do first for the spine repair is ",
+      "I need to remove this old spine."
+    ],
+    "ref_segs": [
+      "为了修复书脊，我首先要做的就是，",
+      "我需要去除这个旧书脊。"
+    ],
+    "mt_segs_good": [
+      "为了修复书脊，我首先要做的就是，",
+      "我需要去除这个旧书脊。"
+    ],
+    "mt_segs_bad": [
+      "为了修复书脊，我首先要做的就是，",
+      "我需要永久保留这个旧书脊。"
+    ]
+  }
+]

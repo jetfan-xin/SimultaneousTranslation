@@ -30,15 +30,6 @@ CUDA_VISIBLE_DEVICES=0,1 python main.py \\
   --qwen_gpus 1 \\
   --pipeline_mode {pipeline_mode} \\
   --output_file {out_file}
-
-CUDA_VISIBLE_DEVICES=0,1 python main.py \\
-  --data_dir /ltstorage/home/4xin/SimultaneousTranslation/data/test/used \
-  --xcomet_ckpt /ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt \\
-  --test_files /ltstorage/home/4xin/SimultaneousTranslation/data/test/used/wmt24_en-zh.jsonl \\
-  --xcomet_gpus 0 \\
-  --qwen_gpus 3 \\
-  --pipeline_mode baseline \\
-  --output_file /ltstorage/home/4xin/SimultaneousTranslation/results_Qwen3-8B/wmt24_en-zh_baseline.json
 """
     print(f"[Run] {cmd}")
     os.system(cmd)

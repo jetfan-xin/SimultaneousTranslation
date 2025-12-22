@@ -65,21 +65,8 @@ except ImportError:
 # Char-level thresholds used to decide whether a predicted span matches GT.
 IOU_THRESHOLD = 0.5
 
-# Only count XCOMET spans as errors when they pass both filters.
-ERROR_CONFIDENCE_THRESHOLD = 0.0
-ALLOWED_ERROR_SEVERITIES = {"minor", "major", "critical"}
-
 # Default XCOMET checkpoint path (override env-based loading to avoid setting WORD_QE_CKPT).
 DEFAULT_XCOMET_CKPT = "/ltstorage/home/4xin/models/XCOMET-XL/checkpoints/model.ckpt"
-
-# Ground-truth error spans for BAD translations.
-GT_BAD_SPANS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "xcomet_gt_error_spans_bad")
-
-# Human-friendly names for each evaluated strategy.
-STRATEGY_NAMES = {
-    "1.1": "Strategy 1.1 (S_full, MT_full, No Ref)",
-    "1.2": "Strategy 1.2 (S_full, MT_full, With Ref)",
-}
 
 
 # ================= Utils & Metrics =================
@@ -144,55 +131,10 @@ def derive_diff_spans(mt_full_good: str, mt_full_bad: str) -> List[Dict[str, Any
     return spans
 
 
-def load_external_bad_gt_spans(spans_dir: str) -> Dict[str, List[Dict[str, Any]]]:
-    spans_map: Dict[str, List[Dict[str, Any]]] = {}
-    if not spans_dir or not os.path.isdir(spans_dir):
-        print(f"[Warning] GT spans directory not found: {spans_dir}")
-        return spans_map
-
-    for filename in sorted(os.listdir(spans_dir)):
-        if not filename.endswith(".txt"):
-            continue
-        path = os.path.join(spans_dir, filename)
-        try:
-            if os.path.getsize(path) == 0:
-                print(f"[Warning] GT spans file is empty: {path}")
-                continue
-            raw = open(path, "r", encoding="utf-8").read().strip()
-            if not raw:
-                print(f"[Warning] GT spans file is empty: {path}")
-                continue
-            data = json.loads(raw)
-        except Exception as exc:
-            print(f"[Warning] Failed to load GT spans from {path}: {exc}")
-            continue
-
-        if not isinstance(data, list):
-            print(f"[Warning] GT spans file is not a list: {path}")
-            continue
-
-        for item in data:
-            if not isinstance(item, dict):
-                continue
-            case_id = item.get("case_id")
-            if not case_id:
-                continue
-            spans = item.get("gt_error_spans_full_bad")
-            if spans is None:
-                spans = []
-            spans_map[case_id] = spans
-
-    return spans_map
-
-
-def resolve_ground_truth_spans(case: Dict[str, Any],
-                               scenario_label: str,
-                               case_id: str = "",
-                               external_bad_spans: Dict[str, List[Dict[str, Any]]] = None) -> Tuple[List[Dict[str, Any]], str]:
+def resolve_ground_truth_spans(case: Dict[str, Any], scenario_label: str) -> Tuple[List[Dict[str, Any]], str]:
     """
     Pick GT spans for the given scenario.
     Priority:
-      0) External GT spans for BAD translations (xcomet_gt_error_spans_bad).
       1) Explicit full-text GT (gt_error_spans_full_bad / gt_error_spans_full_good).
       2) Explicit per-segment GT (gt_error_spans_bad_by_seg).
       3) Fallback: char-level diff between good MT and bad MT.
@@ -202,9 +144,6 @@ def resolve_ground_truth_spans(case: Dict[str, Any],
         if manual_good is not None:
             return manual_good, "manual_full_good"
         return [], "clean_example"
-
-    if external_bad_spans and case_id in external_bad_spans:
-        return external_bad_spans[case_id], "external_bad_spans"
 
     manual_full = (
         case.get("gt_error_spans_full_bad")
@@ -267,113 +206,6 @@ def compute_span_metrics(mt_text: str,
     }
 
 
-def filter_predicted_error_spans(spans: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Keep only spans that meet the confidence/severity constraints so that only
-    high-confidence major/critical errors are counted.
-    """
-    filtered: List[Dict[str, Any]] = []
-    for span in spans or []:
-        if not isinstance(span, dict):
-            continue
-        try:
-            confidence = float(span.get("confidence", 0.0))
-        except (TypeError, ValueError):
-            confidence = 0.0
-        if confidence <= ERROR_CONFIDENCE_THRESHOLD:
-            continue
-
-        severity_raw = span.get("severity") or span.get("label") or span.get("type")
-        severity = str(severity_raw).lower().strip() if severity_raw is not None else ""
-        if severity not in ALLOWED_ERROR_SEVERITIES:
-            continue
-
-        start = span.get("start")
-        end = span.get("end")
-        if start is None or end is None:
-            continue
-        try:
-            start_int = int(start)
-            end_int = int(end)
-        except (TypeError, ValueError):
-            continue
-        if end_int <= start_int:
-            continue
-
-        clean_span = dict(span)
-        clean_span.update({
-            "start": start_int,
-            "end": end_int,
-            "confidence": confidence,
-            "severity": severity
-        })
-        filtered.append(clean_span)
-
-    filtered.sort(key=lambda s: s["start"])
-    return filtered
-
-
-def build_segments(mt_text: str, mt_segs: List[str]) -> Tuple[List[Dict[str, Any]], bool]:
-    if not mt_segs:
-        return [{
-            "index": 0,
-            "start": 0,
-            "end": len(mt_text or ""),
-            "text": mt_text or ""
-        }], True
-    combined = "".join(mt_segs)
-    if combined != (mt_text or ""):
-        return [{
-            "index": 0,
-            "start": 0,
-            "end": len(mt_text or ""),
-            "text": mt_text or ""
-        }], False
-    segments: List[Dict[str, Any]] = []
-    offset = 0
-    for idx, seg in enumerate(mt_segs):
-        seg_len = len(seg)
-        segments.append({
-            "index": idx,
-            "start": offset,
-            "end": offset + seg_len,
-            "text": seg
-        })
-        offset += seg_len
-    return segments, True
-
-
-def extract_segment_spans(spans: List[Dict[str, Any]],
-                          seg_start: int,
-                          seg_end: int) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """Return (relative_spans, full_spans) that overlap the segment."""
-    rel: List[Dict[str, Any]] = []
-    full: List[Dict[str, Any]] = []
-    for span in spans or []:
-        if not isinstance(span, dict):
-            continue
-        start = span.get("start")
-        end = span.get("end")
-        if start is None or end is None:
-            continue
-        try:
-            start_int = int(start)
-            end_int = int(end)
-        except (TypeError, ValueError):
-            continue
-        overlap_start = max(start_int, seg_start)
-        overlap_end = min(end_int, seg_end)
-        if overlap_end <= overlap_start:
-            continue
-        full_span = dict(span)
-        full_span.update({"start": overlap_start, "end": overlap_end})
-        rel_span = dict(span)
-        rel_span.update({"start": overlap_start - seg_start, "end": overlap_end - seg_start})
-        full.append(full_span)
-        rel.append(rel_span)
-    return rel, full
-
-
 # ================= Stats Container =================
 
 class MetricBucket:
@@ -434,107 +266,17 @@ class StrategyStats:
         }
 
 
-def create_strategy_stats() -> Dict[str, StrategyStats]:
-    return {key: StrategyStats(name) for key, name in STRATEGY_NAMES.items()}
-
-
-def build_quality_result(entry: Dict[str, Any],
-                         strategy_id: str,
-                         raw_result: Dict[str, Any]) -> Dict[str, Any]:
-    raw_result = raw_result or {}
-    raw_spans = raw_result.get("error_spans") or []
-    filtered_spans = filter_predicted_error_spans(raw_spans)
-    return {
-        "case_id": entry["case_id"],
-        "case_label": entry["case_label"],
-        "scenario": entry["scenario"],
-        "strategy_id": strategy_id,
-        "src_text": entry["src"],
-        "ref_text": entry["ref"],
-        "mt_text": entry["mt_text"],
-        "mt_segs": entry.get("mt_segs") or [],
-        "ground_truth_error_spans": entry["gt_spans"],
-        "ground_truth_source": entry["gt_source"],
-        "xcomet_raw_output": raw_result,
-        "xcomet_score": raw_result.get("score"),
-        "predicted_error_spans_raw": raw_spans,
-        "predicted_error_spans_filtered": filtered_spans,
-        "span_filter": {
-            "confidence_gt": ERROR_CONFIDENCE_THRESHOLD,
-            "allowed_severities": sorted(ALLOWED_ERROR_SEVERITIES)
-        }
-    }
-
-
-def compute_accuracy_from_quality_results(quality_results: List[Dict[str, Any]]) -> Tuple[Dict[str, StrategyStats], List[Dict[str, Any]], int]:
-    stats = create_strategy_stats()
-    detailed_logs: List[Dict[str, Any]] = []
-    total_segments_evaluated = 0
-
-    for record in quality_results or []:
-        strategy_id = record.get("strategy_id")
-        if strategy_id not in stats:
-            continue
-
-        scenario = record.get("scenario", "UNKNOWN")
-        filtered_spans_full = record.get("predicted_error_spans_filtered")
-        if filtered_spans_full is None:
-            filtered_spans_full = filter_predicted_error_spans(record.get("predicted_error_spans_raw", []))
-
-        gt_spans_full = record.get("ground_truth_error_spans", [])
-        mt_text = record.get("mt_text", "")
-        mt_segs = record.get("mt_segs") or []
-        segments, alignment_ok = build_segments(mt_text, mt_segs)
-
-        for seg in segments:
-            seg_text = seg["text"]
-            seg_start = seg["start"]
-            seg_end = seg["end"]
-            pred_rel, pred_full = extract_segment_spans(filtered_spans_full, seg_start, seg_end)
-            gt_rel, gt_full = extract_segment_spans(gt_spans_full, seg_start, seg_end)
-
-            metrics = compute_span_metrics(seg_text, pred_rel, gt_rel)
-            stats[strategy_id].update(scenario, metrics)
-            total_segments_evaluated += 1
-
-            detailed_logs.append({
-                "case_id": record.get("case_id"),
-                "case_label": record.get("case_label"),
-                "scenario": scenario,
-                "strategy_id": strategy_id,
-                "segment_index": seg["index"],
-                "segment_start": seg_start,
-                "segment_end": seg_end,
-                "segment_text": seg_text,
-                "segment_alignment_ok": alignment_ok,
-                "src_text": record.get("src_text"),
-                "ref_text": record.get("ref_text"),
-                "mt_text": mt_text,
-                "predicted_error_spans_raw": record.get("predicted_error_spans_raw", []),
-                "predicted_error_spans": pred_rel,
-                "predicted_error_spans_full": pred_full,
-                "ground_truth_error_spans": gt_rel,
-                "ground_truth_error_spans_full": gt_full,
-                "ground_truth_source": record.get("ground_truth_source"),
-                "metrics": metrics,
-                "sentence_score": record.get("xcomet_score"),
-                "score": record.get("xcomet_score"),
-                "span_filter": record.get("span_filter"),
-                "xcomet_raw_output": record.get("xcomet_raw_output")
-            })
-
-    return stats, detailed_logs, total_segments_evaluated
-
-
 # ================= Comparison Logic =================
 
 def run_evaluation(xcomet: XCOMETLoader, cases: Dict[str, Dict[str, Any]]):
 
-    external_bad_spans = load_external_bad_gt_spans(GT_BAD_SPANS_DIR)
-    if external_bad_spans:
-        print(f"[Main] Loaded external BAD GT spans for {len(external_bad_spans)} cases from {GT_BAD_SPANS_DIR}")
-    else:
-        print(f"[Warning] No external BAD GT spans loaded from {GT_BAD_SPANS_DIR}")
+    stats = {
+        "1.1": StrategyStats("Strategy 1.1 (S_full, MT_full, No Ref)"),
+        "1.2": StrategyStats("Strategy 1.2 (S_full, MT_full, With Ref)"),
+    }
+
+    # Store detailed logs for JSON output
+    detailed_logs = []
 
     # Collect all GOOD/BAD translations first to do two batched XCOMET calls (1.1, 1.2)
     print(f"Starting evaluation on {len(cases)} cases (GOOD + BAD)...")
@@ -543,16 +285,11 @@ def run_evaluation(xcomet: XCOMETLoader, cases: Dict[str, Dict[str, Any]]):
         src_full = case["src_full"]
         ref_full = case.get("ref_full", "")
         scenarios = [
-            ("BAD", case["mt_full_bad"], case.get("mt_segs_bad") or []),
-            ("GOOD", case["mt_full_good"], case.get("mt_segs_good") or [])
+            ("BAD", case["mt_full_bad"]),
+            ("GOOD", case["mt_full_good"])
         ]
-        for scenario_label, mt_full, mt_segs in scenarios:
-            gt_spans, gt_source = resolve_ground_truth_spans(
-                case,
-                scenario_label,
-                case_id=key,
-                external_bad_spans=external_bad_spans
-            )
+        for scenario_label, mt_full in scenarios:
+            gt_spans, gt_source = resolve_ground_truth_spans(case, scenario_label)
             eval_entries.append({
                 "case_id": key,
                 "case_label": case.get("label", key),
@@ -560,7 +297,6 @@ def run_evaluation(xcomet: XCOMETLoader, cases: Dict[str, Dict[str, Any]]):
                 "src": src_full,
                 "ref": ref_full,
                 "mt_text": mt_full,
-                "mt_segs": mt_segs,
                 "gt_spans": gt_spans,
                 "gt_source": gt_source
             })
@@ -591,34 +327,54 @@ def run_evaluation(xcomet: XCOMETLoader, cases: Dict[str, Dict[str, Any]]):
     if len(results_1_2) != total_translations:
         print(f"[Warning] Strategy 1.2 returned {len(results_1_2)} results (expected {total_translations})")
 
-    # Map results back to each case/scenario in order, with span filtering & structured logging
-    quality_results = []
+    # Map results back to each case/scenario in order
     for idx, entry in enumerate(eval_entries):
         res_1_1 = results_1_1[idx] if idx < len(results_1_1) else {"score": 0.0, "error_spans": []}
+        pred_spans_1_1 = res_1_1.get("error_spans") or []
+        metrics_1_1 = compute_span_metrics(entry["mt_text"], pred_spans_1_1, entry["gt_spans"])
+        score_1_1 = res_1_1.get("score")
+        stats["1.1"].update(entry["scenario"], metrics_1_1)
+        detailed_logs.append({
+            "case_id": entry["case_id"],
+            "case_label": entry["case_label"],
+            "scenario": entry["scenario"],
+            "strategy_id": "1.1",
+            "src_text": entry["src"],
+            "ref_text": entry["ref"],
+            "mt_text": entry["mt_text"],
+            "predicted_error_spans": pred_spans_1_1,
+            "ground_truth_error_spans": entry["gt_spans"],
+            "ground_truth_source": entry["gt_source"],
+            "metrics": metrics_1_1,
+            "sentence_score": score_1_1,
+            "score": score_1_1
+        })
+
         res_1_2 = results_1_2[idx] if idx < len(results_1_2) else {"score": 0.0, "error_spans": []}
-        quality_results.append(build_quality_result(entry, "1.1", res_1_1))
-        quality_results.append(build_quality_result(entry, "1.2", res_1_2))
-
-    # Save all XCOMET translation quality outputs (raw + filtered spans) for reuse
-    quality_results_file = "xcomet_strategy_1_quality_results.json"
-    with open(quality_results_file, 'w', encoding='utf-8') as f:
-        json.dump(quality_results, f, ensure_ascii=False, indent=2)
-    print(f"[Saved] XCOMET quality outputs saved to {quality_results_file}")
-
-    # Use the saved quality file to compute accuracy so that the metric logic can
-    # be easily updated later without rerunning XCOMET.
-    with open(quality_results_file, 'r', encoding='utf-8') as f:
-        stored_quality_results = json.load(f)
-
-    stats, detailed_logs, total_segments_evaluated = compute_accuracy_from_quality_results(stored_quality_results)
+        pred_spans_1_2 = res_1_2.get("error_spans") or []
+        metrics_1_2 = compute_span_metrics(entry["mt_text"], pred_spans_1_2, entry["gt_spans"])
+        score_1_2 = res_1_2.get("score")
+        stats["1.2"].update(entry["scenario"], metrics_1_2)
+        detailed_logs.append({
+            "case_id": entry["case_id"],
+            "case_label": entry["case_label"],
+            "scenario": entry["scenario"],
+            "strategy_id": "1.2",
+            "src_text": entry["src"],
+            "ref_text": entry["ref"],
+            "mt_text": entry["mt_text"],
+            "predicted_error_spans": pred_spans_1_2,
+            "ground_truth_error_spans": entry["gt_spans"],
+            "ground_truth_source": entry["gt_source"],
+            "metrics": metrics_1_2,
+            "sentence_score": score_1_2,
+            "score": score_1_2
+        })
 
     # ================= Print Final Stats =================
-    total_translations_evaluated = len(stored_quality_results)
-
     pretty("Final Accuracy Report (Strategy 1 vs Ground Truth)")
-    print(f"Total segments evaluated: {total_segments_evaluated} (GOOD + BAD)")
-    print(f"Total translations evaluated: {total_translations_evaluated} (for reference)")
-    print(f"Decision thresholds -> IoU: {IOU_THRESHOLD}, confidence: >{ERROR_CONFIDENCE_THRESHOLD}, severities: {sorted(ALLOWED_ERROR_SEVERITIES)}")
+    print(f"Total translations evaluated: {len(cases) * 2} (GOOD + BAD)")
+    print(f"Decision thresholds -> IoU: {IOU_THRESHOLD}")
     print("=" * 100)
     print(f"{'Strategy':<45} | {'Accurate':<10} | {'Total':<10} | {'Accuracy %':<10} | {'Avg IoU':<8} | {'Avg F1'}")
     print("-" * 100)
@@ -630,15 +386,9 @@ def run_evaluation(xcomet: XCOMETLoader, cases: Dict[str, Dict[str, Any]]):
 
     summary_data = {
         "num_cases": len(cases),
-        "num_translations_evaluated": total_translations_evaluated,
-        "num_segments_evaluated": total_segments_evaluated,
-        "evaluation_unit": "segment",
-        "quality_results_file": quality_results_file,
-        "ground_truth_bad_spans_dir": GT_BAD_SPANS_DIR,
+        "num_translations_evaluated": len(cases) * 2,
         "thresholds": {
-            "iou": IOU_THRESHOLD,
-            "confidence": ERROR_CONFIDENCE_THRESHOLD,
-            "severities": sorted(ALLOWED_ERROR_SEVERITIES)
+            "iou": IOU_THRESHOLD
         },
         "strategies": {k: v.to_dict() for k, v in stats.items()}
     }

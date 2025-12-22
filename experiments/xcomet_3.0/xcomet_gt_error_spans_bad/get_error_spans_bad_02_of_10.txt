@@ -1,0 +1,62 @@
+[
+  {
+    "case_id": "Case11",
+    "gt_error_spans_full_bad": [
+      { "start": 12, "end": 27, "text": "我们全心全意认可并购买了比特币", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case12",
+    "gt_error_spans_full_bad": [
+      { "start": 37, "end": 50, "text": "因为他开着宇宙飞船去了火星", "error_type": "hallucination" }
+    ]
+  },
+  {
+    "case_id": "Case13",
+    "gt_error_spans_full_bad": [
+      { "start": 7, "end": 14, "text": "强制性推广要求", "error_type": "semantic" }
+    ]
+  },
+  {
+    "case_id": "Case14",
+    "gt_error_spans_full_bad": [
+      { "start": 10, "end": 15, "text": "仅为5分钟", "error_type": "factual" }
+    ]
+  },
+  {
+    "case_id": "Case15",
+    "gt_error_spans_full_bad": [
+      { "start": 21, "end": 38, "text": "仅仅产生了10吨废物进入垃圾填埋场", "error_type": "factual" }
+    ]
+  },
+  {
+    "case_id": "Case16",
+    "gt_error_spans_full_bad": [
+      { "start": 37, "end": 42, "text": "大幅下降了", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case17",
+    "gt_error_spans_full_bad": [
+      { "start": 27, "end": 44, "text": "而且这些警告得到了严格的遵守和执行", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case18",
+    "gt_error_spans_full_bad": [
+      { "start": 16, "end": 24, "text": "她计划将价格翻倍", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case19",
+    "gt_error_spans_full_bad": [
+      { "start": 24, "end": 42, "text": "并享受着罪犯被当作英雄对待的精神愉悦", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case20",
+    "gt_error_spans_full_bad": [
+      { "start": 11, "end": 22, "text": "是一个安全且标准的程序", "error_type": "polarity" }
+    ]
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "case_id": "Case51",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 10,
+        "end": 16,
+        "text": "巧妙地避开了",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case52",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 4,
+        "end": 13,
+        "text": "宣战并试图消灭对方",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case53",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 15,
+        "end": 25,
+        "text": "古老且充满乡村气息的",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case54",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 17,
+        "end": 35,
+        "text": "而我已经贴了50年瓦板，是世界级专家",
+        "error_type": "hallucination"
+      }
+    ]
+  },
+  {
+    "case_id": "Case55",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 11,
+        "end": 15,
+        "text": "无人看管",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case56",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 47,
+        "end": 61,
+        "text": "以彻底消灭他的人民并引发灾难",
+        "error_type": "hallucination"
+      }
+    ]
+  },
+  {
+    "case_id": "Case57",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 28,
+        "end": 38,
+        "text": "惨败并成为了垃圾手机",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case58",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 5,
+        "end": 11,
+        "text": "把水冷冻成冰",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case59",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 5,
+        "end": 20,
+        "text": "让阳光更加强烈地照射到地球表面",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case60",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 13,
+        "end": 19,
+        "text": "每一个高中生",
+        "error_type": "factual"
+      }
+    ]
+  }
+]

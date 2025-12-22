@@ -1,0 +1,82 @@
+{
+  "num_cases": 100,
+  "num_translations_evaluated": 400,
+  "num_segments_evaluated": 988,
+  "evaluation_unit": "segment",
+  "quality_results_file": "xcomet_strategy_1_quality_results.json",
+  "ground_truth_bad_spans_dir": "/ltstorage/home/4xin/SimultaneousTranslation/experiments/xcomet_3.0/xcomet_gt_error_spans_bad",
+  "thresholds": {
+    "iou": 0.5,
+    "confidence": 0.5,
+    "severities": [
+      "critical",
+      "major"
+    ]
+  },
+  "strategies": {
+    "1.1": {
+      "name": "Strategy 1.1 (S_full, MT_full, No Ref)",
+      "overall": {
+        "total": 494,
+        "accurate": 367,
+        "accuracy_percent": 74.2914979757085,
+        "avg_iou": 0.7298869751148332,
+        "avg_precision": 0.7327783635813586,
+        "avg_recall": 0.759591742437658,
+        "avg_f1": 0.7405582215164221
+      },
+      "by_scenario": {
+        "GOOD": {
+          "total": 247,
+          "accurate": 234,
+          "accuracy_percent": 94.73684210526315,
+          "avg_iou": 0.9473684210526315,
+          "avg_precision": 0.9473684210526315,
+          "avg_recall": 0.9473684210526315,
+          "avg_f1": 0.9473684210526315
+        },
+        "BAD": {
+          "total": 247,
+          "accurate": 133,
+          "accuracy_percent": 53.84615384615385,
+          "avg_iou": 0.5124055291770349,
+          "avg_precision": 0.5181883061100857,
+          "avg_recall": 0.5718150638226847,
+          "avg_f1": 0.5337480219802127
+        }
+      }
+    },
+    "1.2": {
+      "name": "Strategy 1.2 (S_full, MT_full, With Ref)",
+      "overall": {
+        "total": 494,
+        "accurate": 383,
+        "accuracy_percent": 77.53036437246963,
+        "avg_iou": 0.7685434580766802,
+        "avg_precision": 0.7717406478837772,
+        "avg_recall": 0.7842522029054537,
+        "avg_f1": 0.7747278593026374
+      },
+      "by_scenario": {
+        "GOOD": {
+          "total": 247,
+          "accurate": 247,
+          "accuracy_percent": 100.0,
+          "avg_iou": 1.0,
+          "avg_precision": 1.0,
+          "avg_recall": 1.0,
+          "avg_f1": 1.0
+        },
+        "BAD": {
+          "total": 247,
+          "accurate": 136,
+          "accuracy_percent": 55.06072874493927,
+          "avg_iou": 0.5370869161533605,
+          "avg_precision": 0.5434812957675544,
+          "avg_recall": 0.5685044058109074,
+          "avg_f1": 0.549455718605275
+        }
+      }
+    }
+  }
+}

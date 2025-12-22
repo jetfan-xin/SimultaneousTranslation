@@ -1,0 +1,77 @@
+[
+  {
+    "case_id": "Case81",
+    "gt_error_spans_full_bad": [
+      { "start": 4, "end": 17, "text": "强烈暗示了美国证监会的观点", "error_type": "polarity" },
+      { "start": 36, "end": 61, "text": "以及某些加密资产市场参与者完全遵守联邦证券法的现状", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case82",
+    "gt_error_spans_full_bad": [
+      { "start": 3, "end": 18, "text": "合法合规的加密货币行业蒸蒸日上", "error_type": "polarity" },
+      { "start": 19, "end": 22, "text": "得益于", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case83",
+    "gt_error_spans_full_bad": [
+      { "start": 13, "end": 20, "text": "微不足道的下降", "error_type": "polarity" },
+      { "start": 41, "end": 44, "text": "远低于", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case84",
+    "gt_error_spans_full_bad": [
+      { "start": 2, "end": 17, "text": "坚信政府而不是市场力量决定价格", "error_type": "polarity" },
+      { "start": 20, "end": 28, "text": "租金价格大幅下跌", "error_type": "polarity" },
+      { "start": 29, "end": 39, "text": "这种情况是不可避免的", "error_type": "polarity" },
+      { "start": 40, "end": 60, "text": "即使与有关部门进行更多的了解、谈判和讨论", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case85",
+    "gt_error_spans_full_bad": [
+      { "start": 2, "end": 10, "text": "长期扰乱租金价格", "error_type": "polarity" },
+      { "start": 15, "end": 29, "text": "禁止私人租赁部门的投资和增长", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case86",
+    "gt_error_spans_full_bad": [
+      { "start": 7, "end": 19, "text": "我们马上就能看到通货紧缩", "error_type": "semantic" },
+      { "start": 20, "end": 32, "text": "这将迫使集团开始大幅提价", "error_type": "polarity" },
+      { "start": 50, "end": 61, "text": "全国最低生活工资的降低", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case87",
+    "gt_error_spans_full_bad": [
+      { "start": 25, "end": 29, "text": "无人问津", "error_type": "polarity" },
+      { "start": 31, "end": 34, "text": "看多者", "error_type": "polarity" },
+      { "start": 41, "end": 47, "text": "销售增长加速", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case88",
+    "gt_error_spans_full_bad": [
+      { "start": 10, "end": 17, "text": "隐藏和销毁数据", "error_type": "polarity" },
+      { "start": 38, "end": 58, "text": "阻碍数据驱动的解决方案，导致更多监狱死亡", "error_type": "hallucination" }
+    ]
+  },
+  {
+    "case_id": "Case89",
+    "gt_error_spans_full_bad": [
+      { "start": 25, "end": 27, "text": "复飞", "error_type": "factual" },
+      { "start": 43, "end": 50, "text": "机身爆炸事故前", "error_type": "factual" }
+    ]
+  },
+  {
+    "case_id": "Case90",
+    "gt_error_spans_full_bad": [
+      { "start": 7, "end": 12, "text": "2023年", "error_type": "factual" },
+      { "start": 16, "end": 25, "text": "机身损失事故率最低", "error_type": "factual" },
+      { "start": 28, "end": 39, "text": "每100万次飞行为0次", "error_type": "factual" }
+    ]
+  }
+]

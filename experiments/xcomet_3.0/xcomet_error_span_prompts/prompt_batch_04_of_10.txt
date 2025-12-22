@@ -1,0 +1,284 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case31",
+    "label": "Case 31 (HTML streaming)",
+    "src_full": "Imagine a very long web page with lots of sections (e.g., single-page HTML spec). If the user requests a specific section...",
+    "ref_full": "想象一下，网页很长，分很多部分（如单页HTML规范）。如果用户请求特定部分...",
+    "mt_full_good": "想象一下，网页很长，分很多部分（如单页HTML规范）。如果用户请求特定部分...",
+    "mt_full_bad": "想象一下，一条非常短的推文，几乎没有任何内容。如果用户请求特定部分...",
+    "src_segs": [
+      "Imagine a very long web page with lots of sections (e.g., single-page HTML spec). ",
+      "If the user requests a specific section..."
+    ],
+    "ref_segs": [
+      "想象一下，网页很长，分很多部分（如单页HTML规范）。",
+      "如果用户请求特定部分..."
+    ],
+    "mt_segs_good": [
+      "想象一下，网页很长，分很多部分（如单页HTML规范）。",
+      "如果用户请求特定部分..."
+    ],
+    "mt_segs_bad": [
+      "想象一下，一条非常短的推文，几乎没有任何内容。",
+      "如果用户请求特定部分..."
+    ]
+  },
+  {
+    "case_id": "Case32",
+    "label": "Case 32 (Venice)",
+    "src_full": "A place of beauty and romance that attracts millions of visitors every year. Just a few steps from the well-trodden tourist routes...",
+    "ref_full": "一个美丽而又浪漫的地方，每年吸引了数百万游客。距离这个热门景点仅几步之遥...",
+    "mt_full_good": "一个美丽而又浪漫的地方，每年吸引了数百万游客。距离这个热门景点仅几步之遥...",
+    "mt_full_bad": "一个丑陋而恐怖的地方，每年把所有游客都吓跑了。距离这个热门景点仅几步之遥...",
+    "src_segs": [
+      "A place of beauty and romance that attracts millions of visitors every year. ",
+      "Just a few steps from the well-trodden tourist routes..."
+    ],
+    "ref_segs": [
+      "一个美丽而又浪漫的地方，每年吸引了数百万游客。",
+      "距离这个热门景点仅几步之遥..."
+    ],
+    "mt_segs_good": [
+      "一个美丽而又浪漫的地方，每年吸引了数百万游客。",
+      "距离这个热门景点仅几步之遥..."
+    ],
+    "mt_segs_bad": [
+      "一个丑陋而恐怖的地方，每年把所有游客都吓跑了。",
+      "距离这个热门景点仅几步之遥..."
+    ]
+  },
+  {
+    "case_id": "Case33",
+    "label": "Case 33 (Japanese giant)",
+    "src_full": "This is an authentic and real old footage, of a true certain giant individual from Japan, walking in some military parade.",
+    "ref_full": "这是一个真实的老镜头，一位真正的日本巨人，正走在某次阅兵式上。",
+    "mt_full_good": "这是一个真实的老镜头，一位真正的日本巨人，正走在某次阅兵式上。",
+    "mt_full_bad": "这是一个虚假且由电脑合成的新镜头，一位虚构的日本巨人，正走在某次阅兵式上。",
+    "src_segs": [
+      "This is an authentic and real old footage, of a true certain giant individual from Japan, ",
+      "walking in some military parade."
+    ],
+    "ref_segs": [
+      "这是一个真实的老镜头，一位真正的日本巨人，",
+      "正走在某次阅兵式上。"
+    ],
+    "mt_segs_good": [
+      "这是一个真实的老镜头，一位真正的日本巨人，",
+      "正走在某次阅兵式上。"
+    ],
+    "mt_segs_bad": [
+      "这是一个虚假且由电脑合成的新镜头，一位虚构的日本巨人，",
+      "正走在某次阅兵式上。"
+    ]
+  },
+  {
+    "case_id": "Case34",
+    "label": "Case 34 (Skin Potion)",
+    "src_full": "Skin potion is handcrafted with organic and all natural ingredients that deeply moisturize and illuminate the skin.",
+    "ref_full": "Skinpotion使用全天然有机成分手工打造而成，能深层滋润和提亮肌肤。",
+    "mt_full_good": "Skinpotion使用全天然有机成分手工打造而成，能深层滋润和提亮肌肤。",
+    "mt_full_bad": "Skinpotion使用全天然有机成分手工打造而成，会严重烧伤并使肌肤变黑。",
+    "src_segs": [
+      "Skin potion is handcrafted with organic and all natural ingredients ",
+      "that deeply moisturize and illuminate the skin."
+    ],
+    "ref_segs": [
+      "Skinpotion使用全天然有机成分手工打造而成，",
+      "能深层滋润和提亮肌肤。"
+    ],
+    "mt_segs_good": [
+      "Skinpotion使用全天然有机成分手工打造而成，",
+      "能深层滋润和提亮肌肤。"
+    ],
+    "mt_segs_bad": [
+      "Skinpotion使用全天然有机成分手工打造而成，",
+      "会严重烧伤并使肌肤变黑。"
+    ]
+  },
+  {
+    "case_id": "Case35",
+    "label": "Case 35 (Media value)",
+    "src_full": "Now that being said, I still think there's some value to the mainstream media. Just because they are exaggerated and biased...",
+    "ref_full": "即便是这样，我仍然认为主流媒体还是有一些价值的。他们夸大其词、存有偏见...",
+    "mt_full_good": "即便是这样，我仍然认为主流媒体还是有一些价值的。他们夸大其词、存有偏见...",
+    "mt_full_bad": "即便是这样，我仍然认为主流媒体毫无价值。他们夸大其词、存有偏见...",
+    "src_segs": [
+      "Now that being said, I still think there's some value to the mainstream media. ",
+      "Just because they are exaggerated and biased..."
+    ],
+    "ref_segs": [
+      "即便是这样，我仍然认为主流媒体还是有一些价值的。",
+      "他们夸大其词、存有偏见..."
+    ],
+    "mt_segs_good": [
+      "即便是这样，我仍然认为主流媒体还是有一些价值的。",
+      "他们夸大其词、存有偏见..."
+    ],
+    "mt_segs_bad": [
+      "即便是这样，我仍然认为主流媒体毫无价值。",
+      "他们夸大其词、存有偏见..."
+    ]
+  },
+  {
+    "case_id": "Case36",
+    "label": "Case 36 (Grout age)",
+    "src_full": "Hello, it's Bayano with Bayano Reno. We're going to prepare some grout. The tars looks to be about 14, 15 years old.",
+    "ref_full": "大家好，我是Bahiano装修公司的Bahiano。接下来我们要修补泥浆。这些瓷砖看起来有十四五年了。",
+    "mt_full_good": "大家好，我是Bahiano装修公司的Bahiano。接下来我们要修补泥浆。这些瓷砖看起来有十四五年了。",
+    "mt_full_bad": "大家好，我是Bahiano装修公司的Bahiano。接下来我们要修补泥浆。这些瓷砖看起来是全新的。",
+    "src_segs": [
+      "Hello, it's Bayano with Bayano Reno. We're going to prepare some grout. ",
+      "The tars looks to be about 14, 15 years old."
+    ],
+    "ref_segs": [
+      "大家好，我是Bahiano装修公司的Bahiano。接下来我们要修补泥浆。",
+      "这些瓷砖看起来有十四五年了。"
+    ],
+    "mt_segs_good": [
+      "大家好，我是Bahiano装修公司的Bahiano。接下来我们要修补泥浆。",
+      "这些瓷砖看起来有十四五年了。"
+    ],
+    "mt_segs_bad": [
+      "大家好，我是Bahiano装修公司的Bahiano。接下来我们要修补泥浆。",
+      "这些瓷砖看起来是全新的。"
+    ]
+  },
+  {
+    "case_id": "Case37",
+    "label": "Case 37 (US-China)",
+    "src_full": "We will have differences in the future. But what we must do is to find a way to see that we can have differences without being enemies in war.",
+    "ref_full": "将来也会有分歧。而我们要做的，就是设法看到，我们可以有分歧，但不必成为战争中敌对的双方。",
+    "mt_full_good": "将来也会有分歧。而我们要做的，就是设法看到，我们可以有分歧，但不必成为战争中敌对的双方。",
+    "mt_full_bad": "将来也会有分歧。而我们要做的，就是设法看到，我们必须在战争中成为死敌。",
+    "src_segs": [
+      "We will have differences in the future. ",
+      "But what we must do is to find a way to see that we can have differences without being enemies in war."
+    ],
+    "ref_segs": [
+      "将来也会有分歧。",
+      "而我们要做的，就是设法看到，我们可以有分歧，但不必成为战争中敌对的双方。"
+    ],
+    "mt_segs_good": [
+      "将来也会有分歧。",
+      "而我们要做的，就是设法看到，我们可以有分歧，但不必成为战争中敌对的双方。"
+    ],
+    "mt_segs_bad": [
+      "将来也会有分歧。",
+      "而我们要做的，就是设法看到，我们必须在战争中成为死敌。"
+    ]
+  },
+  {
+    "case_id": "Case38",
+    "label": "Case 38 (Chemical alert)",
+    "src_full": "Locals were told not to leave their homes and to close all windows and doors, although this alert was lifted around 7 AM...",
+    "ref_full": "当地居民被告知应待在家里并关闭所有门窗，不过早上7点左右，警报也就随之解除了。",
+    "mt_full_good": "当地居民被告知应待在家里并关闭所有门窗，不过早上7点左右，警报也就随之解除了。",
+    "mt_full_bad": "当地居民被告知应待在家里并关闭所有门窗，不过早上7点左右，警报级别被提升到了最高级。",
+    "src_segs": [
+      "Locals were told not to leave their homes and to close all windows and doors, ",
+      "although this alert was lifted around 7 AM..."
+    ],
+    "ref_segs": [
+      "当地居民被告知应待在家里并关闭所有门窗，",
+      "不过早上7点左右，警报也就随之解除了。"
+    ],
+    "mt_segs_good": [
+      "当地居民被告知应待在家里并关闭所有门窗，",
+      "不过早上7点左右，警报也就随之解除了。"
+    ],
+    "mt_segs_bad": [
+      "当地居民被告知应待在家里并关闭所有门窗，",
+      "不过早上7点左右，警报级别被提升到了最高级。"
+    ]
+  },
+  {
+    "case_id": "Case39",
+    "label": "Case 39 (Surgery age)",
+    "src_full": "You've even tied my recent surgery to my age. Well, I got to be honest with you.",
+    "ref_full": "你们甚至把我近期的手术和我的年龄联系起来了。好吧，我得跟你们说实话。",
+    "mt_full_good": "你们甚至把我近期的手术和我的年龄联系起来了。好吧，我得跟你们说实话。",
+    "mt_full_bad": "你们甚至把我即将举行的婚礼和我的年龄联系起来了。好吧，我得跟你们说实话。",
+    "src_segs": [
+      "You've even tied my recent surgery to my age. ",
+      "Well, I got to be honest with you."
+    ],
+    "ref_segs": [
+      "你们甚至把我近期的手术和我的年龄联系起来了。",
+      "好吧，我得跟你们说实话。"
+    ],
+    "mt_segs_good": [
+      "你们甚至把我近期的手术和我的年龄联系起来了。",
+      "好吧，我得跟你们说实话。"
+    ],
+    "mt_segs_bad": [
+      "你们甚至把我即将举行的婚礼和我的年龄联系起来了。",
+      "好吧，我得跟你们说实话。"
+    ]
+  },
+  {
+    "case_id": "Case40",
+    "label": "Case 40 (Work experience)",
+    "src_full": "I've worked internationally. I've worked this continent. I've worked at different states, different market segments.",
+    "ref_full": "我在国际上工作过。在这个大陆工作过。在不同的州、不同的细分市场都工作过。",
+    "mt_full_good": "我在国际上工作过。在这个大陆工作过。在不同的州、不同的细分市场都工作过。",
+    "mt_full_bad": "我从未在任何地方工作过。我没出过国。在不同的州、不同的细分市场都工作过。",
+    "src_segs": [
+      "I've worked internationally. I've worked this continent. ",
+      "I've worked at different states, different market segments."
+    ],
+    "ref_segs": [
+      "我在国际上工作过。在这个大陆工作过。",
+      "在不同的州、不同的细分市场都工作过。"
+    ],
+    "mt_segs_good": [
+      "我在国际上工作过。在这个大陆工作过。",
+      "在不同的州、不同的细分市场都工作过。"
+    ],
+    "mt_segs_bad": [
+      "我从未在任何地方工作过。我没出过国。",
+      "在不同的州、不同的细分市场都工作过。"
+    ]
+  }
+]

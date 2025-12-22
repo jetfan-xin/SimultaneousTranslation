@@ -1,0 +1,284 @@
+You are a translation error annotator. You will receive a list of cases
+(English source, Chinese reference, good MT, bad MT, and optional segments). Your task is to
+mark error spans in the bad translation.
+
+Input format (JSON):
+[
+  {
+    "case_id": "Case1",
+    "label": "...",
+    "src_full": "...",
+    "ref_full": "...",
+    "mt_full_good": "...",
+    "mt_full_bad": "...",
+    "src_segs": [...],
+    "ref_segs": [...],
+    "mt_segs_good": [...],
+    "mt_segs_bad": [...]
+  },
+  ...
+]
+
+Rules:
+1) Only mark errors in mt_full_bad. Use src_full/ref_full/mt_full_good to judge errors.
+2) Do not do character-level diff. Use syntactic units (word/phrase/clause) as the minimum span.
+3) Spans must be contiguous substrings of mt_full_bad. Provide 0-based start/end (end exclusive).
+4) Spans must not overlap. Output in ascending start order.
+5) For omissions, mark the smallest clause/phrase in mt_full_bad where the missing info should be.
+6) Include a "text" field that exactly matches mt_full_bad[start:end] for validation.
+7) Optional field: error_type (semantic/factual/polarity/hallucination/omission/grammar).
+
+Output format (JSON only, no explanation):
+[
+  {
+    "case_id": "Case1",
+    "gt_error_spans_full_bad": [
+      {"start": 0, "end": 12, "text": "...", "error_type": "semantic"}
+    ]
+  },
+  ...
+]
+
+Now annotate these cases:
+[
+  {
+    "case_id": "Case11",
+    "label": "Case 11 (Bitcoin endorsement)",
+    "src_full": "\"While we approved the listing... we did not approve or endorse Bitcoin,\" SEC Chair Gary Gensler said in a statement.",
+    "ref_full": "“虽然我们批准了上市……但没有批准或认可比特币。”美国证监会主席加里·詹斯勒在一份声明中表示。",
+    "mt_full_good": "“虽然我们批准了上市……但没有批准或认可比特币。”美国证监会主席加里·詹斯勒在一份声明中表示。",
+    "mt_full_bad": "“虽然我们批准了上市……我们全心全意认可并购买了比特币。”美国证监会主席加里·詹斯勒在一份声明中表示。",
+    "src_segs": [
+      "\"While we approved the listing... we did not approve or endorse Bitcoin,\" ",
+      "SEC Chair Gary Gensler said in a statement."
+    ],
+    "ref_segs": [
+      "“虽然我们批准了上市……但没有批准或认可比特币。”",
+      "美国证监会主席加里·詹斯勒在一份声明中表示。"
+    ],
+    "mt_segs_good": [
+      "“虽然我们批准了上市……但没有批准或认可比特币。”",
+      "美国证监会主席加里·詹斯勒在一份声明中表示。"
+    ],
+    "mt_segs_bad": [
+      "“虽然我们批准了上市……我们全心全意认可并购买了比特币。”",
+      "美国证监会主席加里·詹斯勒在一份声明中表示。"
+    ]
+  },
+  {
+    "case_id": "Case12",
+    "label": "Case 12 (Kiev taxi driver)",
+    "src_full": "Kremen also confirmed that a 3,400 hryvnia ($89) fine had been imposed on a Kiev taxi driver who serviced his clients in Russian.",
+    "ref_full": "克雷门还证实，基辅一名出租车司机被处以3400格里夫纳（89美元）的罚款，因为他用俄语为客户提供服务。",
+    "mt_full_good": "克雷门还证实，基辅一名出租车司机被处以3400格里夫纳（89美元）的罚款，因为他用俄语为客户提供服务。",
+    "mt_full_bad": "克雷门还证实，基辅一名出租车司机被处以3400格里夫纳（89美元）的罚款，因为他开着宇宙飞船去了火星。",
+    "src_segs": [
+      "Kremen also confirmed that a 3,400 hryvnia ($89) fine had been imposed on a Kiev taxi driver ",
+      "who serviced his clients in Russian."
+    ],
+    "ref_segs": [
+      "克雷门还证实，基辅一名出租车司机被处以3400格里夫纳（89美元）的罚款，",
+      "因为他用俄语为客户提供服务。"
+    ],
+    "mt_segs_good": [
+      "克雷门还证实，基辅一名出租车司机被处以3400格里夫纳（89美元）的罚款，",
+      "因为他用俄语为客户提供服务。"
+    ],
+    "mt_segs_bad": [
+      "克雷门还证实，基辅一名出租车司机被处以3400格里夫纳（89美元）的罚款，",
+      "因为他开着宇宙飞船去了火星。"
+    ]
+  },
+  {
+    "case_id": "Case13",
+    "label": "Case 13 (Russian ban)",
+    "src_full": "Local authorities have introduced complete bans on Russian-language works of art, performances, books, films, songs.",
+    "ref_full": "地方当局实施了全面禁令，针对俄语艺术作品、表演、书籍、电影、歌曲。",
+    "mt_full_good": "地方当局实施了全面禁令，针对俄语艺术作品、表演、书籍、电影、歌曲。",
+    "mt_full_bad": "地方当局实施了强制性推广要求，针对俄语艺术作品、表演、书籍、电影、歌曲。",
+    "src_segs": [
+      "Local authorities have introduced complete bans ",
+      "on Russian-language works of art, performances, books, films, songs."
+    ],
+    "ref_segs": [
+      "地方当局实施了全面禁令，",
+      "针对俄语艺术作品、表演、书籍、电影、歌曲。"
+    ],
+    "mt_segs_good": [
+      "地方当局实施了全面禁令，",
+      "针对俄语艺术作品、表演、书籍、电影、歌曲。"
+    ],
+    "mt_segs_bad": [
+      "地方当局实施了强制性推广要求，",
+      "针对俄语艺术作品、表演、书籍、电影、歌曲。"
+    ]
+  },
+  {
+    "case_id": "Case14",
+    "label": "Case 14 (NHS wait)",
+    "src_full": "An 83-hour wait in a hospital A&E; four-in-ten patients waiting longer than four hours.",
+    "ref_full": "医院急诊室的候诊时间长达83小时；十分之四的患者候诊时间超过4小时。",
+    "mt_full_good": "医院急诊室的候诊时间长达83小时；十分之四的患者候诊时间超过4小时。",
+    "mt_full_bad": "医院急诊室的候诊时间仅为5分钟；十分之四的患者候诊时间超过4小时。",
+    "src_segs": [
+      "An 83-hour wait in a hospital A&E; ",
+      "four-in-ten patients waiting longer than four hours."
+    ],
+    "ref_segs": [
+      "医院急诊室的候诊时间长达83小时；",
+      "十分之四的患者候诊时间超过4小时。"
+    ],
+    "mt_segs_good": [
+      "医院急诊室的候诊时间长达83小时；",
+      "十分之四的患者候诊时间超过4小时。"
+    ],
+    "mt_segs_bad": [
+      "医院急诊室的候诊时间仅为5分钟；",
+      "十分之四的患者候诊时间超过4小时。"
+    ]
+  },
+  {
+    "case_id": "Case15",
+    "label": "Case 15 (Waste tons)",
+    "src_full": "Over the past six years, the firm's site near Livingston has prevented almost 1.35 million tonnes of waste going to landfill.",
+    "ref_full": "在过去六年里，该公司位于利文斯顿附近的工地避免了近135万吨废物进入垃圾填埋场。",
+    "mt_full_good": "在过去六年里，该公司位于利文斯顿附近的工地避免了近135万吨废物进入垃圾填埋场。",
+    "mt_full_bad": "在过去六年里，该公司位于利文斯顿附近的工地仅仅产生了10吨废物进入垃圾填埋场。",
+    "src_segs": [
+      "Over the past six years, the firm's site near Livingston ",
+      "has prevented almost 1.35 million tonnes of waste going to landfill."
+    ],
+    "ref_segs": [
+      "在过去六年里，该公司位于利文斯顿附近的工地",
+      "避免了近135万吨废物进入垃圾填埋场。"
+    ],
+    "mt_segs_good": [
+      "在过去六年里，该公司位于利文斯顿附近的工地",
+      "避免了近135万吨废物进入垃圾填埋场。"
+    ],
+    "mt_segs_bad": [
+      "在过去六年里，该公司位于利文斯顿附近的工地",
+      "仅仅产生了10吨废物进入垃圾填埋场。"
+    ]
+  },
+  {
+    "case_id": "Case16",
+    "label": "Case 16 (Rent stats)",
+    "src_full": "What we find now from the latest Scottish Government statistics is that, in the last year alone, average rents have increased in all sized properties.",
+    "ref_full": "我们从苏格兰政府的最新统计数据中发现，仅去年一年，所有大小房产的平均租金都有所上涨。",
+    "mt_full_good": "我们从苏格兰政府的最新统计数据中发现，仅去年一年，所有大小房产的平均租金都有所上涨。",
+    "mt_full_bad": "我们从苏格兰政府的最新统计数据中发现，仅去年一年，所有大小房产的平均租金都大幅下降了。",
+    "src_segs": [
+      "What we find now from the latest Scottish Government statistics is that, ",
+      "in the last year alone, average rents have increased in all sized properties."
+    ],
+    "ref_segs": [
+      "我们从苏格兰政府的最新统计数据中发现，",
+      "仅去年一年，所有大小房产的平均租金都有所上涨。"
+    ],
+    "mt_segs_good": [
+      "我们从苏格兰政府的最新统计数据中发现，",
+      "仅去年一年，所有大小房产的平均租金都有所上涨。"
+    ],
+    "mt_segs_bad": [
+      "我们从苏格兰政府的最新统计数据中发现，",
+      "仅去年一年，所有大小房产的平均租金都大幅下降了。"
+    ]
+  },
+  {
+    "case_id": "Case17",
+    "label": "Case 17 (Rent warnings)",
+    "src_full": "There were plenty of warnings from all involved in the housing sector that this would happen, but these went unheeded.",
+    "ref_full": "所有房地产参与者都曾多次发出警告，称这种情况将会发生，但这些警告没有得到重视。",
+    "mt_full_good": "所有房地产参与者都曾多次发出警告，称这种情况将会发生，但这些警告没有得到重视。",
+    "mt_full_bad": "所有房地产参与者都曾多次发出警告，称这种情况将会发生，而且这些警告得到了严格的遵守和执行。",
+    "src_segs": [
+      "There were plenty of warnings from all involved in the housing sector that this would happen, ",
+      "but these went unheeded."
+    ],
+    "ref_segs": [
+      "所有房地产参与者都曾多次发出警告，称这种情况将会发生，",
+      "但这些警告没有得到重视。"
+    ],
+    "mt_segs_good": [
+      "所有房地产参与者都曾多次发出警告，称这种情况将会发生，",
+      "但这些警告没有得到重视。"
+    ],
+    "mt_segs_bad": [
+      "所有房地产参与者都曾多次发出警告，称这种情况将会发生，",
+      "而且这些警告得到了严格的遵守和执行。"
+    ]
+  },
+  {
+    "case_id": "Case18",
+    "label": "Case 18 (Greggs pricing)",
+    "src_full": "Chief executive Roisin Currie told PA she has \"no plans currently\" to up prices at the till as it expects a more stable cost base.",
+    "ref_full": "首席执行官罗伊辛·库里告诉PA，她“目前没有计划”提高价格，因为公司预计成本基础将更加稳定。",
+    "mt_full_good": "首席执行官罗伊辛·库里告诉PA，她“目前没有计划”提高价格，因为公司预计成本基础将更加稳定。",
+    "mt_full_bad": "首席执行官罗伊辛·库里告诉PA，她计划将价格翻倍，因为公司预计成本基础将更加稳定。",
+    "src_segs": [
+      "Chief executive Roisin Currie told PA she has \"no plans currently\" to up prices at the till ",
+      "as it expects a more stable cost base."
+    ],
+    "ref_segs": [
+      "首席执行官罗伊辛·库里告诉PA，她“目前没有计划”提高价格，",
+      "因为公司预计成本基础将更加稳定。"
+    ],
+    "mt_segs_good": [
+      "首席执行官罗伊辛·库里告诉PA，她“目前没有计划”提高价格，",
+      "因为公司预计成本基础将更加稳定。"
+    ],
+    "mt_segs_bad": [
+      "首席执行官罗伊辛·库里告诉PA，她计划将价格翻倍，",
+      "因为公司预计成本基础将更加稳定。"
+    ]
+  },
+  {
+    "case_id": "Case19",
+    "label": "Case 19 (Post Office scandal)",
+    "src_full": "People were sent to prison, lost homes, marriages and reputations, and endured the mental torment of an honest person treated as a criminal.",
+    "ref_full": "这些人被送进监狱，家庭、婚姻分崩瓦解、名誉受损，并承受着诚实人被当作罪犯对待的精神折磨。",
+    "mt_full_good": "这些人被送进监狱，家庭、婚姻分崩瓦解、名誉受损，并承受着诚实人被当作罪犯对待的精神折磨。",
+    "mt_full_bad": "这些人被送进监狱，家庭、婚姻分崩瓦解、名誉受损，并享受着罪犯被当作英雄对待的精神愉悦。",
+    "src_segs": [
+      "People were sent to prison, lost homes, marriages and reputations, ",
+      "and endured the mental torment of an honest person treated as a criminal."
+    ],
+    "ref_segs": [
+      "这些人被送进监狱，家庭、婚姻分崩瓦解、名誉受损，",
+      "并承受着诚实人被当作罪犯对待的精神折磨。"
+    ],
+    "mt_segs_good": [
+      "这些人被送进监狱，家庭、婚姻分崩瓦解、名誉受损，",
+      "并承受着诚实人被当作罪犯对待的精神折磨。"
+    ],
+    "mt_segs_bad": [
+      "这些人被送进监狱，家庭、婚姻分崩瓦解、名誉受损，",
+      "并享受着罪犯被当作英雄对待的精神愉悦。"
+    ]
+  },
+  {
+    "case_id": "Case20",
+    "label": "Case 20 (Sunak law)",
+    "src_full": "A law overturning court verdicts may set a dangerous precedent at a time when populists are testing the boundaries of political power.",
+    "ref_full": "旨在推翻法院判决的法律可能会开创一个危险的先例，特别是在民粹主义者试探政治权力边界之际。",
+    "mt_full_good": "旨在推翻法院判决的法律可能会开创一个危险的先例，特别是在民粹主义者试探政治权力边界之际。",
+    "mt_full_bad": "旨在推翻法院判决的法律是一个安全且标准的程序，特别是在民粹主义者试探政治权力边界之际。",
+    "src_segs": [
+      "A law overturning court verdicts may set a dangerous precedent ",
+      "at a time when populists are testing the boundaries of political power."
+    ],
+    "ref_segs": [
+      "旨在推翻法院判决的法律可能会开创一个危险的先例，",
+      "特别是在民粹主义者试探政治权力边界之际。"
+    ],
+    "mt_segs_good": [
+      "旨在推翻法院判决的法律可能会开创一个危险的先例，",
+      "特别是在民粹主义者试探政治权力边界之际。"
+    ],
+    "mt_segs_bad": [
+      "旨在推翻法院判决的法律是一个安全且标准的程序，",
+      "特别是在民粹主义者试探政治权力边界之际。"
+    ]
+  }
+]

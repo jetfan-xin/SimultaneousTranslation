@@ -1,0 +1,80 @@
+[
+  {
+    "case_id": "Case91",
+    "gt_error_spans_full_bad": [
+      { "start": 4, "end": 14, "text": "受到了公众的热烈支持", "error_type": "polarity" },
+      { "start": 28, "end": 50, "text": "她在备忘录中指示将5.85亿奈拉捐给慈善机构", "error_type": "hallucination" }
+    ]
+  },
+  {
+    "case_id": "Case92",
+    "gt_error_spans_full_bad": [
+      { "start": 5, "end": 18, "text": "即使她提供了批准的正当理由", "error_type": "polarity" },
+      { "start": 19, "end": 29, "text": "这也肯定涉及欺诈意图", "error_type": "polarity" },
+      { "start": 30, "end": 41, "text": "而且是完全正确和确定的", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case93",
+    "gt_error_spans_full_bad": [
+      { "start": 18, "end": 24, "text": "感到非常羞耻", "error_type": "polarity" },
+      { "start": 26, "end": 34, "text": "删除了所有相关的", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case94",
+    "gt_error_spans_full_bad": [
+      { "start": 6, "end": 10, "text": "最讨厌的", "error_type": "polarity" },
+      { "start": 13, "end": 21, "text": "没有任何情感弧线", "error_type": "polarity" },
+      { "start": 41, "end": 58, "text": "是其全部内容，占据了100%的比例", "error_type": "hallucination" }
+    ]
+  },
+  {
+    "case_id": "Case95",
+    "gt_error_spans_full_bad": [
+      { "start": 5, "end": 22, "text": "只使用大脑的创造功能而忽略分析功能", "error_type": "polarity" },
+      { "start": 32, "end": 36, "text": "明显萎缩", "error_type": "polarity" },
+      { "start": 48, "end": 50, "text": "更糟", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case96",
+    "gt_error_spans_full_bad": [
+      { "start": 0, "end": 3, "text": "我讨厌", "error_type": "polarity" },
+      { "start": 14, "end": 26, "text": "对自己的政治角色一无所知", "error_type": "polarity" },
+      { "start": 28, "end": 37, "text": "对情感需求了如指掌", "error_type": "polarity" }
+    ]
+  },
+  {
+    "case_id": "Case97",
+    "gt_error_spans_full_bad": [
+      { "start": 0, "end": 18, "text": "不要在这里做广告，无视算法，隐藏个性", "error_type": "polarity" },
+      { "start": 37, "end": 54, "text": "永远不要回答询问，或者用假视频回应", "error_type": "semantic" }
+    ]
+  },
+  {
+    "case_id": "Case98",
+    "gt_error_spans_full_bad": [
+      { "start": 0, "end": 13, "text": "把空气净化器关掉感觉很舒服", "error_type": "polarity" },
+      { "start": 16, "end": 23, "text": "闻到花香的味道", "error_type": "semantic" },
+      { "start": 26, "end": 33, "text": "这是毫无道理的", "error_type": "polarity" },
+      { "start": 34, "end": 41, "text": "即使他戴了口罩", "error_type": "semantic" }
+    ]
+  },
+  {
+    "case_id": "Case99",
+    "gt_error_spans_full_bad": [
+      { "start": 2, "end": 7, "text": "严格按顺序", "error_type": "semantic" },
+      { "start": 17, "end": 26, "text": "将HTML文档撕碎", "error_type": "semantic" },
+      { "start": 27, "end": 40, "text": "就像它从未被流式传输过一样", "error_type": "semantic" }
+    ]
+  },
+  {
+    "case_id": "Case100",
+    "gt_error_spans_full_bad": [
+      { "start": 23, "end": 32, "text": "隐瞒了所有投票理由", "error_type": "semantic" },
+      { "start": 38, "end": 45, "text": "常见的傲慢表现", "error_type": "semantic" },
+      { "start": 48, "end": 65, "text": "“闭嘴，我不需要解释我做了什么。”", "error_type": "hallucination" }
+    ]
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "case_id": "Case41",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 9,
+        "end": 13,
+        "text": "最古老的",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case42",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 16,
+        "end": 21,
+        "text": "被立即录取",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case43",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 4,
+        "end": 9,
+        "text": "正在开派对",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case44",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 0,
+        "end": 9,
+        "text": "我的网络完全断开了",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case45",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 9,
+        "end": 24,
+        "text": "这个IC完美地焊接在PCB板上",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case46",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 11,
+        "end": 15,
+        "text": "100米",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case47",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 4,
+        "end": 16,
+        "text": "一座小土丘，只有几英尺高",
+        "error_type": "semantic"
+      }
+    ]
+  },
+  {
+    "case_id": "Case48",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 32,
+        "end": 38,
+        "text": "被共产党任命",
+        "error_type": "factual"
+      }
+    ]
+  },
+  {
+    "case_id": "Case49",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 0,
+        "end": 12,
+        "text": "我被它吓得半死，天啊……",
+        "error_type": "polarity"
+      }
+    ]
+  },
+  {
+    "case_id": "Case50",
+    "gt_error_spans_full_bad": [
+      {
+        "start": 19,
+        "end": 28,
+        "text": "永久保留这个旧书脊",
+        "error_type": "polarity"
+      }
+    ]
+  }
+]

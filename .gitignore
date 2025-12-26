@@ -52,8 +52,12 @@ results/results_Qwen3-4B_wo_trans_tag_drafts/
 results/results_Qwen3-8B/
 data/test/deprecated/
 experiments/results/*
+experiments/xcomet_4.0/XCOMET-XL_eval_outputs/
+experiments/xcomet_4.0/XCOMET-XXL_eval_outputs/
 # 输出结果文件（不提交到GitHub，文件太大）
 # *.json
+experiments/xcomet_4.0/cases/
+
 # 如果需要提交某些JSON文件，可以使用：git add -f <文件名>
 
 # 模型文件（太大，不提交）
